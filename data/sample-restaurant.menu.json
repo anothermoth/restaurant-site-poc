@@ -139,7 +139,7 @@
       "options": [
         {
           "id": "add-bacon",
-          "name": "Bacon",
+          "name": "Extra bacon",
           "priceDelta": 250
         },
         {
@@ -350,7 +350,7 @@
         {
           "id": "smash-burger",
           "name": "Double Smash Burger",
-          "description": "Two smashed beef patties, American cheese, pickles, onions and house sauce on a potato bun.",
+          "description": "Two smashed beef patties, American cheese, crispy bacon, pickles, onions and house sauce on a potato bun.",
           "price": 1500,
           "photo": {
             "src": "/photos/smash-burger.jpg",
