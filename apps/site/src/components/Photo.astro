@@ -1,0 +1,33 @@
+---
+import { Picture } from "astro:assets";
+import { photoAsset } from "../lib/photos.ts";
+
+interface Props {
+  src: string;
+  alt: string;
+  widths: number[];
+  sizes: string;
+  class?: string;
+  priority?: boolean;
+}
+const { src, alt, widths, sizes, class: cls, priority = false } = Astro.props;
+const asset = photoAsset(src);
+const usable = asset ? widths.filter((w) => w <= asset.width) : [];
+---
+{asset ? (
+  <Picture
+    src={asset}
+    alt={alt}
+    widths={usable.length ? usable : [asset.width]}
+    sizes={sizes}
+    formats={["avif", "webp"]}
+    fallbackFormat="jpg"
+    quality={72}
+    class={cls}
+    loading={priority ? "eager" : "lazy"}
+    decoding={priority ? "sync" : "async"}
+    fetchpriority={priority ? "high" : "auto"}
+  />
+) : (
+  <img src={src} alt={alt} class={cls} loading={priority ? "eager" : "lazy"} decoding="async" />
+)}

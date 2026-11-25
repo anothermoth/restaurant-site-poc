@@ -70,7 +70,12 @@ export function MicButton({ onTranscript, disabled }: { onTranscript: (text: str
   }
 
   if (supported === false) {
-    return <p className="muted small mic-hint">Voice input needs a browser with speech recognition (Chrome, Edge or Safari). Type your change below instead.</p>;
+    return (
+      <span className="mic-off" title="Voice input needs a browser with speech recognition (Chrome, Edge or Safari)">
+        <MicIcon />
+        <span className="sr-only">Voice input needs a browser with speech recognition (Chrome, Edge or Safari). Type your change below instead.</span>
+      </span>
+    );
   }
   return (
     <div className="mic">
@@ -86,9 +91,21 @@ export function MicButton({ onTranscript, disabled }: { onTranscript: (text: str
         onKeyDown={(e) => (e.key === " " || e.key === "Enter") && !e.repeat && start()}
         onKeyUp={(e) => (e.key === " " || e.key === "Enter") && stop()}
       >
-        <span aria-hidden="true">🎙</span> {listening ? "Listening… release to send" : "Hold to talk"}
+        <MicIcon />
+        <span className="mic-text">{listening ? "Listening… release to send" : "Hold to talk"}</span>
       </button>
       {interim && <p className="interim" aria-live="polite">{interim}</p>}
     </div>
+  );
+}
+
+function MicIcon() {
+  return (
+    <span className="mic-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="3" width="6" height="11" rx="3" />
+        <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+      </svg>
+    </span>
   );
 }

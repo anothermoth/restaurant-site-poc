@@ -28,7 +28,12 @@ export interface ApiResponse {
   headers: Record<string, string>;
 }
 
-const ProposeBody = z.object({ utterance: z.string().trim().min(1).max(400), input: z.enum(["voice", "text"]).default("text") });
+const ProposeBody = z.object({
+  utterance: z.string().trim().min(1).max(400),
+  input: z.enum(["voice", "text"]).default("text"),
+  // The item or section the owner clicked in the menu panel ("make this $14").
+  target: z.object({ kind: z.enum(["item", "category"]), id: z.string().min(1).max(80) }).optional(),
+});
 const SettingsBody = z.object({ autoApproveLowRisk: z.boolean() }).partial();
 const CreditsBody = z.object({ credits: z.number().int().min(0).max(100_000) });
 const UndoBody = z.object({ changeId: z.string().optional() }).optional();
@@ -83,7 +88,7 @@ export function createRouter(service: EditService, opts: { seedMenu?: Menu; conf
   on("GET", "/api/sites/:slug/report", async ({ slug }) => checkMenu((await service.site(await slug())).draft));
   on("POST", "/api/sites/:slug/commands", async ({ slug, req, sessionId, ipHash }) => {
     const body = ProposeBody.parse(req.body);
-    return service.propose(await slug(), body.utterance, body.input, { sessionId, ipHash });
+    return service.propose(await slug(), body.utterance, body.input, { sessionId, ipHash }, body.target);
   });
   on("POST", "/api/sites/:slug/changes/:id/approve", async ({ slug, params }) => service.approve(params.id!, await slug()));
   on("POST", "/api/sites/:slug/changes/:id/reject", async ({ slug, params }) => service.reject(params.id!, await slug()));

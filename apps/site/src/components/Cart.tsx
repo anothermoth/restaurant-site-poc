@@ -61,13 +61,33 @@ export default function Cart({ menu, storageKey }: Props) {
     return () => document.removeEventListener("click", onClick);
   }, [items, add]);
 
+  const sheetOpen = open || picking !== null;
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setPicking(null);
+      setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [sheetOpen]);
+
   return (
     <>
       <p className="sr-only" role="status" aria-live="polite">{notice}</p>
-      <button type="button" className="cart-fab" onClick={() => setOpen(true)} aria-label={`Open cart, ${count} items`}>
-        Cart <span className="cart-count">{count}</span>
-        {count > 0 && <span className="cart-fab-total">{money(priced.subtotal)}</span>}
-      </button>
+      <div className="cart-dock">
+        <button type="button" className={`cart-fab${count > 0 ? " has-items" : ""}`} onClick={() => setOpen(true)} aria-label={`Open cart, ${count} items`}>
+          <span className="cart-count" key={count}>{count}</span>
+          <span className="cart-fab-label">{count > 0 ? "View order" : "Your order"}</span>
+          {count > 0 && <span className="cart-fab-total">{money(priced.subtotal)}</span>}
+        </button>
+      </div>
 
       {picking && (
         <ModifierPicker
@@ -84,36 +104,44 @@ export default function Cart({ menu, storageKey }: Props) {
       {open && (
         <div className="sheet-backdrop" onClick={() => setOpen(false)}>
           <aside className="sheet" role="dialog" aria-modal="true" aria-label="Your order" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-grip" aria-hidden="true" />
             <header className="sheet-head">
               <h2>Your order</h2>
-              <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close cart">×</button>
+              <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close cart">
+                <CloseIcon />
+              </button>
             </header>
-            {priced.lines.length === 0 ? (
-              <p className="muted">Your cart is empty.</p>
-            ) : (
-              <ul className="cart-lines">
-                {priced.lines.map((l) => (
-                  <li key={l.key}>
-                    <div>
-                      <strong>{l.name}</strong>
-                      {l.optionNames.length > 0 && <div className="muted small">{l.optionNames.join(", ")}</div>}
-                    </div>
-                    <div className="qty">
-                      <button type="button" onClick={() => dispatch({ type: "setQty", key: l.key, quantity: l.quantity - 1 })} aria-label={`Remove one ${l.name}`}>−</button>
-                      <span aria-label="quantity">{l.quantity}</span>
-                      <button type="button" onClick={() => dispatch({ type: "setQty", key: l.key, quantity: l.quantity + 1 })} aria-label={`Add one ${l.name}`}>+</button>
-                    </div>
-                    <span className="line-total">{money(l.lineTotal)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="sheet-body">
+              {priced.lines.length === 0 ? (
+                <div className="cart-empty">
+                  <p>Your cart is empty.</p>
+                  <p className="muted small">Add a few things from the menu and they will show up here.</p>
+                </div>
+              ) : (
+                <ul className="cart-lines">
+                  {priced.lines.map((l) => (
+                    <li key={l.key}>
+                      <div className="cart-line-text">
+                        <strong>{l.name}</strong>
+                        {l.optionNames.length > 0 && <div className="muted small">{l.optionNames.join(", ")}</div>}
+                      </div>
+                      <div className="qty">
+                        <button type="button" onClick={() => dispatch({ type: "setQty", key: l.key, quantity: l.quantity - 1 })} aria-label={`Remove one ${l.name}`}>−</button>
+                        <span aria-label="quantity">{l.quantity}</span>
+                        <button type="button" onClick={() => dispatch({ type: "setQty", key: l.key, quantity: l.quantity + 1 })} aria-label={`Add one ${l.name}`}>+</button>
+                      </div>
+                      <span className="line-total">{money(l.lineTotal)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div className="sheet-foot">
               <div className="subtotal"><span>Subtotal</span><strong>{money(priced.subtotal)}</strong></div>
-              <button type="button" className="btn btn-primary" disabled title="Demo: sample restaurant, no orders are placed">
+              <button type="button" className="btn btn-accent btn-block" disabled title="Demo: sample restaurant, no orders are placed">
                 Checkout (demo, disabled)
               </button>
-              <p className="muted small">Prices are computed from the menu, not the browser; a real checkout re-prices on the server with the same priceCart().</p>
+              <p className="muted small">Prices come from the menu data, not the browser; a real checkout re-prices on the server with the same priceCart().</p>
               {priced.lines.length > 0 && (
                 <button type="button" className="link-btn" onClick={() => dispatch({ type: "clear" })}>Clear cart</button>
               )}
@@ -122,6 +150,14 @@ export default function Cart({ menu, storageKey }: Props) {
         </div>
       )}
     </>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+      <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -164,18 +200,25 @@ function ModifierPicker({ item, menu, onAdd, onCancel }: {
           if (valid) onAdd(sel);
         }}
       >
+        <div className="sheet-grip" aria-hidden="true" />
         <header className="sheet-head">
-          <h2>{item.name}</h2>
-          <button type="button" className="icon-btn" onClick={onCancel} aria-label="Close">×</button>
+          <div>
+            <h2>{item.name}</h2>
+            {item.description && <p className="muted small sheet-sub">{item.description}</p>}
+          </div>
+          <button type="button" className="icon-btn" onClick={onCancel} aria-label="Close">
+            <CloseIcon />
+          </button>
         </header>
+        <div className="sheet-body">
         {groups.map((g) => {
           const single = g.maxSelect === 1;
           const chosen = sel[g.id] ?? [];
           return (
             <fieldset key={g.id} className="mod-group">
               <legend>
-                {g.name}{" "}
-                <span className="muted small">
+                <span className="mod-name">{g.name}</span>
+                <span className={`mod-req${g.minSelect > 0 ? " is-required" : ""}`}>
                   {g.minSelect > 0 ? "Required" : "Optional"}
                   {!single ? `, up to ${g.maxSelect}` : ""}
                 </span>
@@ -189,15 +232,16 @@ function ModifierPicker({ item, menu, onAdd, onCancel }: {
                     disabled={!single && !chosen.includes(o.id) && chosen.length >= g.maxSelect}
                     onChange={() => toggle(g.id, o.id, single)}
                   />
-                  <span>{o.name}</span>
-                  {o.priceDelta > 0 && <span className="muted">+{formatPrice(o.priceDelta, menu.currency)}</span>}
+                  <span className="mod-label">{o.name}</span>
+                  {o.priceDelta > 0 && <span className="mod-price">+{formatPrice(o.priceDelta, menu.currency)}</span>}
                 </label>
               ))}
             </fieldset>
           );
         })}
+        </div>
         <div className="sheet-foot">
-          <button type="submit" className="btn btn-primary" disabled={!valid}>
+          <button type="submit" className="btn btn-accent btn-block" disabled={!valid}>
             Add to cart · {formatPrice(unit, menu.currency)}
           </button>
         </div>

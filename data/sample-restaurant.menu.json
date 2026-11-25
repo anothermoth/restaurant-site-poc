@@ -2,7 +2,7 @@
   "restaurant": {
     "slug": "ember-and-elm",
     "name": "Ember & Elm Kitchen",
-    "tagline": "Wood-fired pizza, smash burgers and seasonal plates. (Fictional sample restaurant.)",
+    "tagline": "Wood-fired pizza, smash burgers and seasonal plates.",
     "cuisine": [
       "Pizza",
       "American"
@@ -46,10 +46,10 @@
     ],
     "brandColor": "#b4321f",
     "heroPhoto": {
-      "src": "/img/hero.svg",
-      "alt": "Wood-fired oven with a pizza coming out",
-      "width": 1200,
-      "height": 600
+      "src": "/photos/hero.jpg",
+      "alt": "A wood-fired pizza on a peel in front of the oven fire",
+      "width": 2400,
+      "height": 1602
     }
   },
   "currency": "USD",
@@ -179,10 +179,10 @@
           "description": "Six knots of our pizza dough, brushed with roasted garlic butter and parmesan, with marinara for dipping.",
           "price": 700,
           "photo": {
-            "src": "/img/garlic-knots.svg",
-            "alt": "GARLIC KNOTS",
-            "width": 480,
-            "height": 360
+            "src": "/photos/garlic-knots.jpg",
+            "alt": "Golden knotted rolls in a cloth-lined basket",
+            "width": 1400,
+            "height": 933
           },
           "dietaryTags": [
             "vegetarian",
@@ -196,10 +196,10 @@
           "description": "Flash-fried sprouts tossed in hot honey and lime, finished with toasted peanuts.",
           "price": 950,
           "photo": {
-            "src": "/img/crispy-brussels.svg",
-            "alt": "Crispy Brussels Sprouts",
-            "width": 480,
-            "height": 360
+            "src": "/photos/crispy-brussels.jpg",
+            "alt": "Brussels sprouts in a cast-iron pan with garlic",
+            "width": 1400,
+            "height": 933
           },
           "dietaryTags": [
             "vegetarian",
@@ -212,7 +212,13 @@
           "name": "Wood-Fired Wings",
           "description": "",
           "price": 1400,
-          "dietaryTags": []
+          "dietaryTags": [],
+          "photo": {
+            "src": "/photos/wings.jpg",
+            "alt": "Roasted chicken wings with fresh herbs",
+            "width": 1400,
+            "height": 933
+          }
         },
         {
           "id": "burrata",
@@ -220,10 +226,10 @@
           "description": "Creamy burrata over heirloom tomatoes with basil oil, flaky salt and grilled sourdough.",
           "price": 1300,
           "photo": {
-            "src": "/img/burrata.svg",
-            "alt": "Burrata & Heirloom Tomatoes",
-            "width": 480,
-            "height": 360
+            "src": "/photos/burrata.jpg",
+            "alt": "Burrata with cherry tomatoes, basil and olive oil",
+            "width": 1400,
+            "height": 933
           },
           "dietaryTags": [
             "vegetarian",
@@ -244,10 +250,10 @@
           "description": "San Marzano tomato, fresh mozzarella, basil and olive oil on a blistered, 48-hour fermented crust.",
           "price": 1500,
           "photo": {
-            "src": "/img/margherita.svg",
-            "alt": "Margherita",
-            "width": 480,
-            "height": 360
+            "src": "/photos/margherita.jpg",
+            "alt": "Neapolitan margherita pizza with basil and mozzarella",
+            "width": 1400,
+            "height": 788
           },
           "dietaryTags": [
             "vegetarian",
@@ -265,10 +271,10 @@
           "description": "Cup-and-char pepperoni, mozzarella, Calabrian chili and a drizzle of hot honey.",
           "price": 1800,
           "photo": {
-            "src": "/img/hot-honey-pepperoni.svg",
-            "alt": "Hot Honey Pepperoni",
-            "width": 480,
-            "height": 360
+            "src": "/photos/hot-honey-pepperoni.jpg",
+            "alt": "Pepperoni pizza on a wooden board",
+            "width": 1400,
+            "height": 941
           },
           "dietaryTags": [
             "spicy",
@@ -286,10 +292,10 @@
           "description": "Roasted mushrooms, fontina, thyme and garlic confit, no tomato sauce.",
           "price": 1900,
           "photo": {
-            "src": "/img/wild-mushroom.svg",
-            "alt": "Wild Mushroom",
-            "width": 480,
-            "height": 360
+            "src": "/photos/wild-mushroom.jpg",
+            "alt": "Mushroom pizza on a wooden board",
+            "width": 1400,
+            "height": 933
           },
           "dietaryTags": [
             "vegetarian",
@@ -321,10 +327,10 @@
           "description": "Truffle cream, mozzarella, arugula and shaved parmesan.",
           "price": 18500,
           "photo": {
-            "src": "/img/truffle-pie.svg",
-            "alt": "Truffle Pie",
-            "width": 480,
-            "height": 360
+            "src": "/photos/truffle-pie.jpg",
+            "alt": "Pizza topped with arugula and shaved parmesan",
+            "width": 1400,
+            "height": 1050
           },
           "dietaryTags": [
             "vegetarian",
@@ -347,10 +353,10 @@
           "description": "Two smashed beef patties, American cheese, pickles, onions and house sauce on a potato bun.",
           "price": 1500,
           "photo": {
-            "src": "/img/smash-burger.svg",
-            "alt": "Double Smash Burger",
-            "width": 480,
-            "height": 360
+            "src": "/photos/smash-burger.jpg",
+            "alt": "Double cheeseburger on a sesame bun",
+            "width": 1400,
+            "height": 933
           },
           "dietaryTags": [
             "contains-dairy",
@@ -367,10 +373,10 @@
           "description": "Buttermilk-fried chicken thigh, slaw and dill pickles on a toasted bun.",
           "price": 1450,
           "photo": {
-            "src": "/img/chicken-sandwich.svg",
-            "alt": "Crispy Chicken Sandwich",
-            "width": 480,
-            "height": 360
+            "src": "/photos/chicken-sandwich.jpg",
+            "alt": "Crispy fried chicken sandwich with pickles and sauce",
+            "width": 1400,
+            "height": 933
           },
           "modifierGroupIds": [
             "burger-addons"
@@ -382,10 +388,10 @@
           "description": "Black bean and roasted corn patty, avocado, pickled onion and chipotle mayo.",
           "price": 1350,
           "photo": {
-            "src": "/img/veggie-burger.svg",
-            "alt": "Black Bean Burger",
-            "width": 480,
-            "height": 360
+            "src": "/photos/veggie-burger.jpg",
+            "alt": "Veggie burger with lettuce, tomato and onion",
+            "width": 1400,
+            "height": 937
           },
           "dietaryTags": [
             "vegetarian",
@@ -407,10 +413,10 @@
           "description": "Little gem lettuce, garlic croutons, parmesan and anchovy dressing.",
           "price": 1100,
           "photo": {
-            "src": "/img/caesar.svg",
-            "alt": "Caesar Salad",
-            "width": 480,
-            "height": 360
+            "src": "/photos/caesar.jpg",
+            "alt": "Caesar salad with croutons and parmesan",
+            "width": 1400,
+            "height": 788
           },
           "dietaryTags": [
             "contains-dairy",
@@ -436,10 +442,10 @@
           "description": "Mixed greens, shaved radish, citrus and sunflower seeds with a lemon vinaigrette.",
           "price": 950,
           "photo": {
-            "src": "/img/market-greens.svg",
-            "alt": "Market Greens",
-            "width": 480,
-            "height": 360
+            "src": "/photos/market-greens.jpg",
+            "alt": "Green salad with cherry tomatoes, cucumber and radish",
+            "width": 1400,
+            "height": 931
           },
           "dietaryTags": [
             "vegan",
@@ -458,10 +464,10 @@
           "description": "Warm brown-butter chocolate chip cookie baked in cast iron, topped with vanilla gelato.",
           "price": 900,
           "photo": {
-            "src": "/img/skillet-cookie.svg",
-            "alt": "Skillet Cookie",
-            "width": 480,
-            "height": 360
+            "src": "/photos/skillet-cookie.jpg",
+            "alt": "Chocolate chip cookie baked in a cast-iron skillet",
+            "width": 1400,
+            "height": 931
           },
           "dietaryTags": [
             "vegetarian",
@@ -478,7 +484,13 @@
             "vegetarian",
             "contains-dairy",
             "contains-gluten"
-          ]
+          ],
+          "photo": {
+            "src": "/photos/tiramisu.jpg",
+            "alt": "A slice of tiramisu dusted with cocoa",
+            "width": 1400,
+            "height": 933
+          }
         }
       ]
     }

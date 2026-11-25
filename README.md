@@ -14,15 +14,17 @@ Deploy steps: [docs/deploy.md](docs/deploy.md).
 
 ![Voice editor demo](docs/demo.gif)
 
-*Demo, 41 s ([MP4](docs/demo.mp4)), recorded in public-demo mode: a spoken price change → approve → "86 the burrata" → a request the parser doesn't know, handled by the AI fallback for 1 credit → a clarifying question for an ambiguous name → reject → undo → publish to the visitor's private preview → out of credits: the AI helper pauses, and built-in phrases still work. The speech in the recording is simulated: the script feeds fixed transcripts to the browser's speech-recognition API so the run is repeatable. Everything after the transcript is the real stack.*
+*Demo, 46 s ([MP4](docs/demo.mp4)), recorded in public-demo mode: a spoken price change → approve → click the burrata in the menu panel and type "86 it" → a request the parser doesn't know, handled by the AI fallback for 1 credit → a clarifying question for an ambiguous name → reject → undo → publish to the visitor's private preview → out of credits: the AI helper pauses, and built-in phrases still work. The speech in the recording is simulated: the script feeds fixed transcripts to the browser's speech-recognition API so the run is repeatable. Everything after the transcript is the real stack.*
 
-> **Sample data.** "Ember & Elm Kitchen" is a fictional restaurant. The address, phone and menu are made up, item "photos" are generated SVG illustrations, and checkout is disabled. The sample menu has problems seeded on purpose so the checker has something to find.
+> **Sample data.** "Ember & Elm Kitchen" is a fictional restaurant. The address, phone and menu are made up, and checkout is disabled. The food photos are real, free-licensed photography from Pexels, used for illustration (credits and license in [CREDITS.md](CREDITS.md); the photos are not covered by the MIT license). The sample menu has problems seeded on purpose so the checker has something to find.
 
 ![Menu quality report](docs/screenshot-report.png)
 
 | Home | Modifier picker (React island) | Cart |
 |---|---|---|
 | ![Home](docs/screenshot-home.png) | ![Modifiers](docs/screenshot-modifiers.png) | ![Cart](docs/screenshot-cart.png) |
+
+Before/after screenshots of the Nov 2026 visual redesign (desktop and mobile, site and editor) are in [`docs/redesign/`](docs/redesign/).
 
 ## Why this exists
 
@@ -51,7 +53,8 @@ data/
   menu-report.llm.json          saved report from one real LLM run (see below)
 docs/
   token-costs.json              measured parser vs. LLM token usage (see below)
-scripts/          placeholder-art generator, Lighthouse runner, token measurement, demo recorder
+  photos/                       self-hosted Pexels photos (+ sources.json); see CREDITS.md
+scripts/          Lighthouse runner, screenshots, editor photo thumbnails, token measurement, demo recorder
 ```
 
 ### 1. Menu schema (`@restaurant-site-poc/menu-schema`)
@@ -62,6 +65,7 @@ scripts/          placeholder-art generator, Lighthouse runner, token measuremen
 
 ### 2. Site generator (`apps/site`)
 
+- **Design**: a full-bleed photo hero, Instrument Serif for display type with Inter for text (both self-hosted, latin subset, preloaded), a warm restrained palette, photo-forward menu cards, a sticky order button (a bottom bar on mobile) and a modifier sheet that slides up from the bottom on phones. Photos go through Astro's `<Picture>`: AVIF and WebP at several widths with `srcset`/`sizes`, explicit dimensions, lazy below the fold and `fetchpriority="high"` on the hero. Items without a photo (two are left that way on purpose for the checker) get a text-only card.
 - **Home**: hero, featured items, hours, address. **Menu**: sections with sticky category nav, prices, dietary badges and allergen notes, "Add" buttons. **Admin report**: the checker's findings (marked `noindex`).
 - **One React island** (`Cart.tsx`, `client:idle`). The menu itself is plain HTML; the island attaches one delegated click listener for `[data-add-item]` buttons, opens a modifier picker for items with modifier groups, keeps the cart in `localStorage`, and prices it with the same `priceCart()`.
 - **SEO**: per-page title/description, canonical URL, Open Graph tags, `robots.txt`, and **JSON-LD**: `Restaurant` (address, hours, cuisine) on every page, with a full `Menu` → `MenuSection` → `MenuItem` → `Offer` tree (plus `suitableForDiet`) on `/menu`. JSON-LD is escaped so menu text can't break out of the script tag.
@@ -90,8 +94,8 @@ I ran the LLM pass once against xAI's OpenAI-compatible API (`grok-4.20-0309-non
 
 ```
 $ npm run check-menu -- data/sample-restaurant.menu.json --fail-on none
-Ember & Elm Kitchen (sample data): 17 items, score 51/100
-1 errors, 9 warnings, 3 info, 4 auto-fixable
+Ember & Elm Kitchen (sample data): 17 items, score 59/100
+1 errors, 7 warnings, 3 info, 4 auto-fixable
 
 ERROR   price-outlier          "Truffle Pie" is $185.00, 10.0x above the Wood-Fired Pizza median.
         -> Looks like a decimal slip: did you mean $18.50? Category median is $18.50.
@@ -108,10 +112,12 @@ CLI options: `--json <file>` (full report), `--fix <file>` (write the auto-fixed
 | ![Pending change](docs/editor-pending-price.png) | ![AI fallback](docs/editor-llm-fallback.png) |
 | **Ambiguous name: it asks instead of guessing** | **Out of credits: AI paused, parser still works** |
 | ![Clarify](docs/editor-clarify.png) | ![Credits paused](docs/editor-credits-paused.png) |
-| **History with undo** | **Internal margin view (`/dev`)** |
-| ![History](docs/editor-history.png) | ![Margin](docs/dev-margin.png) |
+| **Click-to-target: select an item, say "86 it"** | **History drawer with undo** |
+| ![Click to target](docs/editor-click-to-target.png) | ![History](docs/editor-history.png) |
+| **Internal margin view (`/dev`)** | |
+| ![Margin](docs/dev-margin.png) | |
 
-An owner holds the mic button (or types), says what they want changed, and sees the change highlighted in a live preview plus a field-by-field diff. Nothing reaches the public site until they approve the change and publish.
+The editor is built around one prompt bar (text plus a hold-to-talk mic) with suggestion chips, floating over a live preview of the site. A change shows up as a card right under the prompt, with a before/after diff and Approve/Reject, and the preview scrolls to the highlighted element. A clarifying question shows as choice chips. The right sidebar lists the menu (searchable); clicking an item or section there, or in the preview, makes it the target, shown as a chip in the prompt, so "make this $14", "86 it" or just "$14" work. History is a drawer, credits are a small pill, Publish is top right. On phones the prompt docks at the bottom and the menu opens as a sheet. Nothing reaches the public site until the owner approves the change and publishes.
 
 ```mermaid
 flowchart LR
@@ -154,6 +160,7 @@ flowchart LR
 
 How it fits together:
 
+- **Click-to-target is deterministic.** The selected item or section is sent with the command. The parser resolves "this", "it" and "that one" to it, and accepts bare commands such as "$14", "86", "sold out", "rename to …" or "move to the top" only when something is selected; a named item still wins ("86 the burrata"). Only if the parser can't handle the request does the model see the selection, as one line of context.
 - **Parser first, model second.** A deterministic parser (regex rules + a Levenshtein/word-overlap fuzzy matcher over item and section names) handles the common phrasings for free and in microseconds. Only when it can't parse a request does the API call the LLM.
 - **The model expresses intent; code does the math.** "Knock a dollar off" becomes `adjust_price {deltaCents: -100}` and the engine computes the new price. (An early version asked the model for an absolute price, and it guessed wrong, because the catalog it sees doesn't include prices.)
 - **Clarify or refuse instead of guessing.** Two items called "Caesar Salad" → "Which one did you mean?" with one-tap options. A request outside the vocabulary ("add a banner about our holiday party") is refused with a reason rather than squeezed into the nearest command.

@@ -176,3 +176,29 @@ describe("edit flow", () => {
     expect(s.body.history).toEqual([]);
   });
 });
+
+describe("click-to-target", () => {
+  const sayAbout = (utterance: string, target: unknown) => request(app).post(`/api/sites/${slug}/commands`).send({ utterance, target });
+
+  it("resolves 'this' to the selected item in the parser, with no model call", async () => {
+    const p = await sayAbout("make this $14", { kind: "item", id: "margherita" }).expect(200);
+    expect(p.body.type).toBe("change");
+    expect(p.body.change).toMatchObject({ source: "parser", credits: 0, summary: ["Margherita: price $15.00 → $14.00"] });
+    expect(p.body.change.highlight).toContain("item:margherita.price");
+    const bare = await sayAbout("86", { kind: "item", id: "burrata" }).expect(200);
+    expect(bare.body.change.summary[0]).toMatch(/Burrata/);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed target", async () => {
+    await sayAbout("make this $14", { kind: "page", id: "x" }).expect(400);
+  });
+
+  it("passes the selection to the AI helper as context when the parser can't handle it", async () => {
+    llmReply.content = JSON.stringify({ commands: [{ cmd: "set_price", itemId: "wings", price: 1500 }] });
+    const p = await sayAbout("bump this up to fifteen-ish", { kind: "item", id: "wings" }).expect(200);
+    expect(p.body.change.source).toBe("llm");
+    const sent = JSON.parse(String((fetchImpl.mock.calls[0]![1] as { body: string }).body)) as { messages: { role: string; content: string }[] };
+    expect(sent.messages.at(-1)!.content).toContain('[Selected item: "Wood-Fired Wings" (id wings)]');
+  });
+});

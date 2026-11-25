@@ -1,0 +1,26 @@
+---
+import Base from "../layouts/Base.astro";
+import Photo from "../components/Photo.astro";
+import sources from "../../../../data/photos/sources.json";
+
+type Source = { by: string; byUrl: string; url: string; title: string };
+const photos = Object.entries(sources as Record<string, Source>);
+---
+<Base title="Photo credits" description="Credits for the food photography used on this sample site." noindex>
+  <div class="wrap section report">
+    <h1>Photo credits</h1>
+    <p class="muted">
+      All photos are from <a href="https://www.pexels.com" rel="noopener">Pexels</a> and used under the
+      <a href="https://www.pexels.com/license/" rel="noopener">Pexels License</a> (free to use and modify; attribution appreciated).
+      They are not covered by this project's MIT license.
+    </p>
+    <ul class="credits-list">
+      {photos.map(([key, p]) => (
+        <li class="credit">
+          <Photo src={`/photos/${key}.jpg`} alt="" widths={[128]} sizes="64px" />
+          <span><a href={p.url} rel="noopener">{key.replace(/-/g, " ")}</a> by <a href={p.byUrl} rel="noopener">{p.by}</a></span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</Base>

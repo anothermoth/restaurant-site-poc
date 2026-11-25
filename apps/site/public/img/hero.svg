@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="Wood-fired oven illustration">
-<defs><radialGradient id="g" cx="50%" cy="70%" r="60%"><stop offset="0" stop-color="#ffb347"/><stop offset=".45" stop-color="#d9562b"/><stop offset="1" stop-color="#2a0f08"/></radialGradient></defs>
-<rect width="1200" height="600" fill="#2a0f08"/>
-<path d="M200 600 V330 Q600 20 1000 330 V600 Z" fill="#5a2a1a"/>
-<path d="M380 600 V420 Q600 230 820 420 V600 Z" fill="url(#g)"/>
-<ellipse cx="600" cy="560" rx="150" ry="22" fill="#f6d7a7"/>
-<ellipse cx="600" cy="552" rx="120" ry="14" fill="#d9562b"/>
-</svg>

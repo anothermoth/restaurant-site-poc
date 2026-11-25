@@ -1,8 +1,10 @@
 ---
 import Base from "../layouts/Base.astro";
 import Cart from "../components/Cart.tsx";
+import Photo from "../components/Photo.astro";
 import { cartMenu, menu } from "../lib/data.ts";
 import { priceText, restaurantJsonLd } from "../lib/jsonld.ts";
+import { withPhotoUrls } from "../lib/photos.ts";
 
 const r = menu.restaurant;
 const sections = menu.categories.filter((c) => !c.hidden);
@@ -13,39 +15,52 @@ const TAG_LABEL: Record<string, string> = {
 const TAG_TITLE: Record<string, string> = {
   vegetarian: "Vegetarian", vegan: "Vegan", "gluten-free": "Gluten-free", "dairy-free": "Dairy-free", "nut-free": "Nut-free", spicy: "Spicy",
 };
+const jsonLd = restaurantJsonLd(await withPhotoUrls(menu), site, { includeMenu: true });
 ---
 <Base
   title={`Menu | ${r.name}`}
   description={`Full menu for ${r.name}: ${sections.map((c) => c.name).join(", ")}. Order online for pickup.`}
-  jsonLd={restaurantJsonLd(menu, site, { includeMenu: true })}
+  jsonLd={jsonLd}
 >
-  <div class="wrap section">
-    <h1>Menu</h1>
-    <nav class="cat-nav" aria-label="Menu sections">
-      {sections.map((c) => <a href={`#${c.id}`}>{c.name}</a>)}
-    </nav>
+  <div class="menu-hero wrap">
+    <p class="eyebrow eyebrow-dark">Order for pickup · {r.address.city}</p>
+    <h1 class="title-xl">Menu</h1>
+  </div>
+  <nav class="cat-nav" aria-label="Menu sections">
+    <div class="wrap cat-row">
+      {sections.map((c) => <a href={`#${c.id}`} data-cat-link={c.id}>{c.name}</a>)}
+    </div>
+  </nav>
 
+  <div class="wrap menu-body">
     {sections.map((c) => (
       <section class="menu-section" id={c.id} aria-labelledby={`${c.id}-h`} data-edit-id={`category:${c.id}`}>
-        <h2 id={`${c.id}-h`}>{c.name}</h2>
-        {c.description && <p class="muted">{c.description}</p>}
+        <div class="section-head">
+          <h2 id={`${c.id}-h`} class="title">{c.name}</h2>
+          {c.description && <p class="muted">{c.description}</p>}
+        </div>
         <ul class="menu-list">
           {c.items.filter((i) => i.available).map((i) => {
             const allergens = i.dietaryTags.filter((t) => t.startsWith("contains-")).map((t) => t.replace("contains-", ""));
             return (
-              <li class="menu-item" data-edit-id={`item:${i.id}`}>
-                <div class="mi-text">
+              <li class:list={["dish", { "no-photo": !i.photo }]} id={i.id} data-edit-id={`item:${i.id}`}>
+                <div class="dish-text">
                   <h3 data-edit-id={`item:${i.id}.name`}>{i.name}</h3>
-                  {i.description && <p class="muted" data-edit-id={`item:${i.id}.description`}>{i.description}</p>}
-                  <p class="mi-meta">
+                  {i.description && <p class="dish-desc" data-edit-id={`item:${i.id}.description`}>{i.description}</p>}
+                  <p class="dish-meta">
                     <span class="price" data-edit-id={`item:${i.id}.price`}>{priceText(i.price, menu.currency)}</span>
                     {i.dietaryTags.filter((t) => TAG_LABEL[t]).map((t) => <abbr class="tag" title={TAG_TITLE[t]}>{TAG_LABEL[t]}</abbr>)}
-                    {allergens.length > 0 && <span class="small muted">Contains: {allergens.join(", ")}</span>}
                   </p>
+                  {allergens.length > 0 && <p class="allergens">Contains {allergens.join(", ")}</p>}
                 </div>
-                <div class="mi-side">
-                  {i.photo && <img src={i.photo.src} alt={i.photo.alt} width={160} height={120} loading="lazy" decoding="async" />}
-                  <button type="button" class="btn btn-add" data-add-item={i.id} aria-label={`Add ${i.name} to cart`}>Add</button>
+                <div class="dish-side">
+                  {i.photo && (
+                    <Photo class="dish-img" src={i.photo.src} alt={i.photo.alt} widths={[160, 240, 320, 480]} sizes="(min-width: 640px) 168px, 128px" />
+                  )}
+                  <button type="button" class="add-btn" data-add-item={i.id} aria-label={`Add ${i.name} to cart`}>
+                    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+                    <span class="add-text">Add</span>
+                  </button>
                 </div>
               </li>
             );
@@ -55,4 +70,25 @@ const TAG_TITLE: Record<string, string> = {
     ))}
   </div>
   <Cart client:idle menu={cartMenu} storageKey={`cart:${r.slug}`} />
+  <script>
+    // Highlight the category tab for the section in view (progressive enhancement).
+    const links = new Map(
+      [...document.querySelectorAll<HTMLAnchorElement>("[data-cat-link]")].map((a) => [a.dataset.catLink!, a]),
+    );
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          links.forEach((a) => a.removeAttribute("aria-current"));
+          const a = links.get(e.target.id);
+          if (a) {
+            a.setAttribute("aria-current", "true");
+            a.scrollIntoView({ block: "nearest", inline: "nearest" });
+          }
+        }
+      },
+      { rootMargin: "-140px 0px -60% 0px" },
+    );
+    document.querySelectorAll(".menu-section").forEach((s) => io.observe(s));
+  </script>
 </Base>

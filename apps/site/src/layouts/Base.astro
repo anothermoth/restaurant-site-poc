@@ -1,7 +1,11 @@
 ---
 import "../styles/global.css";
+import interUrl from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+import serifUrl from "@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2?url";
+import serifItalicUrl from "@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url";
 import { serializeJsonLd } from "../lib/jsonld.ts";
 import { menu } from "../lib/data.ts";
+import { clock, dayRange } from "../lib/hours.ts";
 
 interface Props {
   title: string;
@@ -9,25 +13,31 @@ interface Props {
   jsonLd?: unknown;
   noindex?: boolean;
   ogImage?: string;
+  /** "overlay" puts a transparent header over a full-bleed hero photo. */
+  header?: "overlay" | "solid";
 }
-const { title, description, jsonLd, noindex = false, ogImage } = Astro.props;
+const { title, description, jsonLd, noindex = false, ogImage, header = "solid" } = Astro.props;
 const r = menu.restaurant;
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 const image = ogImage ? new URL(ogImage, Astro.site).toString() : undefined;
 const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 // Set EDITOR_URL at build time to link the public demo editor from the footer.
 const editorUrl = process.env.EDITOR_URL;
+const fontFaces = `
+@font-face{font-family:"Inter Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(${interUrl}) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Serif";font-style:normal;font-display:swap;font-weight:400;src:url(${serifUrl}) format("woff2")}
+@font-face{font-family:"Instrument Serif";font-style:italic;font-display:swap;font-weight:400;src:url(${serifItalicUrl}) format("woff2")}`;
 ---
 <!doctype html>
 <html lang="en" style={`--brand:${r.brandColor}`}>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
-    <meta name="theme-color" content={r.brandColor} />
+    <meta name="theme-color" content="#14110f" />
     <meta property="og:type" content="restaurant.restaurant" />
     <meta property="og:site_name" content={r.name} />
     <meta property="og:title" content={title} />
@@ -36,22 +46,21 @@ const editorUrl = process.env.EDITOR_URL;
     {image && <meta property="og:image" content={image} />}
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href={interUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={serifUrl} as="font" type="font/woff2" crossorigin />
+    <style is:inline set:html={fontFaces}></style>
     {jsonLd && <script type="application/ld+json" set:html={serializeJsonLd(jsonLd)} />}
   </head>
-  <body>
+  <body class={header === "overlay" ? "has-overlay" : undefined}>
     <a class="skip" href="#main">Skip to content</a>
-    {r.isSampleData && (
-      <div class="sample-banner" role="note">
-        Sample data: <strong>{r.name}</strong> is a fictional restaurant built for a portfolio demo. No orders are taken.
-      </div>
-    )}
-    <header class="site-head">
+    <header class:list={["site-head", { overlay: header === "overlay" }]}>
       <div class="wrap head-row">
         <a class="brand" href="/">{r.name}</a>
-        <nav aria-label="Main">
-          <a href="/" aria-current={path === "/" ? "page" : undefined}>Home</a>
-          <a href="/menu" aria-current={path === "/menu" ? "page" : undefined}>Menu</a>
-          <a href="/admin/report" aria-current={path === "/admin/report" ? "page" : undefined}>Menu report</a>
+        <nav class="nav" aria-label="Main">
+          <a class="nav-link hide-sm" href="/" aria-current={path === "/" ? "page" : undefined}>Home</a>
+          <a class="nav-link" href="/menu" aria-current={path === "/menu" ? "page" : undefined}>Menu</a>
+          <a class="nav-link hide-sm" href="/#visit">Visit</a>
+          <a class="btn btn-sm btn-accent" href="/menu">Order</a>
         </nav>
       </div>
     </header>
@@ -59,14 +68,41 @@ const editorUrl = process.env.EDITOR_URL;
       <slot />
     </main>
     <footer class="site-foot">
-      <div class="wrap">
-        <p>{r.name} · {r.address.street}, {r.address.city}, {r.address.region} · {r.phone}</p>
-        <p class="muted small">Demo site generated from menu JSON with Astro. Fictional business; address and phone are placeholders.</p>
-        {editorUrl && (
-          <p class="muted small">
-            Try the owner's side: <a href={editorUrl} rel="noopener">edit this menu by voice or text</a> (your own sandbox copy).
+      <div class="wrap foot-grid">
+        <div class="foot-brand">
+          <a class="brand" href="/">{r.name}</a>
+          {r.tagline && <p>{r.tagline}</p>}
+        </div>
+        <div>
+          <h2 class="foot-h">Visit</h2>
+          <address>
+            {r.address.street}<br />{r.address.city}, {r.address.region} {r.address.postalCode}<br />
+            {r.phone && <a href={`tel:${r.phone}`}>{r.phone}</a>}
+          </address>
+        </div>
+        <div>
+          <h2 class="foot-h">Hours</h2>
+          <ul class="foot-list">
+            {r.hours.map((h) => <li>{dayRange(h.days)} · {clock(h.opens)}–{clock(h.closes)}</li>)}
+          </ul>
+        </div>
+        <div>
+          <h2 class="foot-h">Explore</h2>
+          <ul class="foot-list">
+            <li><a href="/menu">Menu &amp; ordering</a></li>
+            <li><a href="/admin/report" aria-current={path === "/admin/report" ? "page" : undefined}>Menu report</a></li>
+            <li><a href="/credits">Photo credits</a></li>
+            {editorUrl && <li><a href={editorUrl} rel="noopener">Owner's editor demo</a></li>}
+          </ul>
+        </div>
+      </div>
+      <div class="wrap foot-fine">
+        {r.isSampleData && (
+          <p role="note">
+            Sample site. {r.name} is a fictional restaurant built for a portfolio demo; no orders are taken and the address and phone are placeholders.
           </p>
         )}
+        <p>Food photography from <a href="https://www.pexels.com" rel="noopener">Pexels</a> under the Pexels License · <a href="/credits">Credits</a></p>
       </div>
     </footer>
   </body>

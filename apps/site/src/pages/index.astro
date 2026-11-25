@@ -1,67 +1,117 @@
 ---
 import Base from "../layouts/Base.astro";
+import Photo from "../components/Photo.astro";
 import { menu } from "../lib/data.ts";
 import { priceText, restaurantJsonLd } from "../lib/jsonld.ts";
+import { photoUrl, withPhotoUrls } from "../lib/photos.ts";
+import { clock, closedDays, dayRange } from "../lib/hours.ts";
 
 const r = menu.restaurant;
 const site = Astro.site!.toString();
-const featuredIds = ["margherita", "hot-honey-pepperoni", "smash-burger"];
-const featured = menu.categories.flatMap((c) => c.items).filter((i) => featuredIds.includes(i.id) && i.available);
-const DAY: Record<string, string> = { Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat", Su: "Sun" };
-const openDays = new Set(r.hours.flatMap((h) => h.days));
-const closedDays = Object.keys(DAY).filter((d) => !openDays.has(d as never));
+const allItems = menu.categories.filter((c) => !c.hidden).flatMap((c) => c.items);
+const featuredIds = ["margherita", "smash-burger", "burrata"];
+const featured = featuredIds
+  .map((id) => allItems.find((i) => i.id === id))
+  .filter((i): i is NonNullable<typeof i> => !!i && i.available);
+const closed = closedDays(r.hours);
 const description = `${r.name}: ${r.cuisine.join(" & ")} in ${r.address.city}, ${r.address.region}. See the menu and order online.`;
+const ogImage = r.heroPhoto ? await photoUrl(r.heroPhoto.src) : undefined;
+const jsonLd = restaurantJsonLd(await withPhotoUrls(menu), site);
 ---
-<Base title={`${r.name} | ${r.cuisine.join(" & ")} in ${r.address.city}`} description={description} jsonLd={restaurantJsonLd(menu, site)} ogImage={r.heroPhoto?.src}>
+<Base title={`${r.name} | ${r.cuisine.join(" & ")} in ${r.address.city}`} description={description} jsonLd={jsonLd} ogImage={ogImage} header="overlay">
   <section class="hero">
     {r.heroPhoto && (
-      <img class="hero-img" src={r.heroPhoto.src} alt={r.heroPhoto.alt} width={r.heroPhoto.width} height={r.heroPhoto.height} fetchpriority="high" decoding="async" />
+      <Photo class="hero-media" src={r.heroPhoto.src} alt={r.heroPhoto.alt} widths={[640, 960, 1280, 1600, 2000, 2400]} sizes="100vw" priority />
     )}
-    <div class="hero-text wrap">
-      <h1>{r.name}</h1>
+    <div class="hero-scrim" aria-hidden="true"></div>
+    <div class="wrap hero-inner">
+      <p class="eyebrow">{r.cuisine.join(" · ")} · {r.address.city}, {r.address.region}</p>
+      <h1 class="display">{r.name}</h1>
       {r.tagline && <p class="lede" data-edit-id="restaurant.tagline">{r.tagline}</p>}
       <div class="cta-row">
-        <a class="btn btn-primary" href="/menu">View menu &amp; order</a>
-        {r.phone && <a class="btn btn-ghost" href={`tel:${r.phone}`}>Call</a>}
+        <a class="btn btn-accent btn-lg" href="/menu">Order pickup</a>
+        <a class="btn btn-glass btn-lg" href="/menu">See the menu</a>
       </div>
     </div>
   </section>
 
-  <section class="wrap section">
-    <h2>Guest favorites</h2>
-    <ul class="grid">
-      {featured.map((i) => (
-        <li class="card">
-          {i.photo && <img src={i.photo.src} alt={i.photo.alt} width={i.photo.width} height={i.photo.height} loading="lazy" decoding="async" />}
-          <div class="card-body">
-            <h3>{i.name}</h3>
-            <p class="muted">{i.description}</p>
-            <p class="price">{priceText(i.price, menu.currency)}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
+  <section class="facts" aria-label="At a glance">
+    <div class="wrap facts-row">
+      <div class="fact">
+        <span class="fact-label">Open</span>
+        <span>{r.hours.map((h) => dayRange(h.days)).join(" · ")}</span>
+      </div>
+      <div class="fact">
+        <span class="fact-label">Find us</span>
+        <span>{r.address.street}, {r.address.city}</span>
+      </div>
+      {r.phone && (
+        <div class="fact">
+          <span class="fact-label">Call</span>
+          <a href={`tel:${r.phone}`}>{r.phone}</a>
+        </div>
+      )}
+    </div>
   </section>
 
-  <section class="wrap section two-col">
-    <div>
-      <h2>Hours</h2>
-      <dl class="hours" data-edit-id="restaurant.hours">
-        {r.hours.map((h) => (
-          <>
-            <dt>{h.days.map((d) => DAY[d]).join(", ")}</dt>
-            <dd>{h.opens} – {h.closes}</dd>
-          </>
+  {featured.length > 0 && (
+    <section class="wrap block" aria-labelledby="fav-h">
+      <div class="block-head">
+        <div>
+          <p class="eyebrow eyebrow-dark">Guest favorites</p>
+          <h2 id="fav-h" class="title">Straight from the fire</h2>
+        </div>
+        <a class="text-link" href="/menu">Full menu <span aria-hidden="true">→</span></a>
+      </div>
+      <ul class="feature-grid">
+        {featured.map((i) => (
+          <li class="feature">
+            <a href={`/menu#${i.id}`} class="feature-link">
+              <div class="feature-media">
+                {i.photo && <Photo src={i.photo.src} alt={i.photo.alt} widths={[400, 640, 900]} sizes="(min-width: 900px) 360px, (min-width: 600px) 45vw, 88vw" />}
+              </div>
+              <div class="feature-body">
+                <h3>{i.name}</h3>
+                <span class="feature-price">{priceText(i.price, menu.currency)}</span>
+              </div>
+              {i.description && <p class="feature-desc">{i.description}</p>}
+            </a>
+          </li>
         ))}
-        {closedDays.length > 0 && (<><dt>{closedDays.map((d) => DAY[d]).join(", ")}</dt><dd>Closed</dd></>)}
-      </dl>
+      </ul>
+    </section>
+  )}
+
+  <section class="wrap block visit" id="visit" aria-labelledby="visit-h">
+    <div class="visit-media">
+      <Photo src="/photos/room.jpg" alt="A warm dining room with plants, wood tables and soft lighting" widths={[480, 720, 960, 1280]} sizes="(min-width: 900px) 520px, 92vw" />
     </div>
-    <div>
-      <h2>Find us</h2>
-      <address>
-        {r.address.street}<br />{r.address.city}, {r.address.region} {r.address.postalCode}<br />
-        {r.phone && <a href={`tel:${r.phone}`}>{r.phone}</a>}
-      </address>
+    <div class="visit-copy">
+      <p class="eyebrow eyebrow-dark">Visit</p>
+      <h2 id="visit-h" class="title">A neighborhood room built around a wood fire.</h2>
+      <p class="muted">Walk in for dinner or order ahead for pickup. Pizzas come out of the oven in about ninety seconds.</p>
+      <div class="visit-cols">
+        <div>
+          <h3 class="mini-h">Hours</h3>
+          <dl class="hours" data-edit-id="restaurant.hours">
+            {r.hours.map((h) => (
+              <>
+                <dt>{dayRange(h.days)}</dt>
+                <dd>{clock(h.opens)} – {clock(h.closes)}</dd>
+              </>
+            ))}
+            {closed.length > 0 && (<><dt>{dayRange(closed)}</dt><dd>Closed</dd></>)}
+          </dl>
+        </div>
+        <div>
+          <h3 class="mini-h">Address</h3>
+          <address>
+            {r.address.street}<br />{r.address.city}, {r.address.region} {r.address.postalCode}<br />
+            {r.phone && <a href={`tel:${r.phone}`}>{r.phone}</a>}
+          </address>
+        </div>
+      </div>
+      <a class="btn btn-dark" href="/menu">Start an order</a>
     </div>
   </section>
 </Base>

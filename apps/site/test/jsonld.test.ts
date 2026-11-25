@@ -23,7 +23,7 @@ describe("JSON-LD", () => {
     const margherita = pizza.hasMenuItem.find((i) => i.name === "Margherita")!;
     expect(margherita.offers).toEqual({ "@type": "Offer", price: "15.00", priceCurrency: "USD" });
     expect(margherita.suitableForDiet).toEqual(["https://schema.org/VegetarianDiet"]);
-    expect(margherita.image).toBe("https://example.com/img/margherita.svg");
+    expect(margherita.image).toBe("https://example.com/photos/margherita.jpg");
   });
 
   it("escapes < so menu text can't close the script tag", () => {

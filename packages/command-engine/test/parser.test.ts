@@ -98,3 +98,48 @@ describe("relative prices", () => {
     expect(cmds("knock $2 off the smash burger")).toEqual([{ cmd: "adjust_price", itemId: "smash-burger", deltaCents: -200 }]);
   });
 });
+
+describe("click-to-target (selected item or section as context)", () => {
+  const item = { target: { kind: "item" as const, id: "margherita" } };
+  const one = (u: string, ctx = item) => {
+    const r = parse(u, menu, ctx);
+    if (r.kind !== "commands") throw new Error(`expected commands for "${u}", got ${r.kind}`);
+    expect(r.commands).toHaveLength(1);
+    return r.commands[0];
+  };
+
+  it("resolves pronouns to the selected item", () => {
+    expect(one("make this $14")).toEqual({ cmd: "set_price", itemId: "margherita", price: 1400 });
+    expect(one("change the price of it to $13")).toEqual({ cmd: "set_price", itemId: "margherita", price: 1300 });
+    expect(one("hide this")).toEqual({ cmd: "hide_item", itemId: "margherita" });
+    expect(one("move this before the burrata")).toEqual({ cmd: "reorder", kind: "item", id: "margherita", to: "before", ref: "burrata" });
+  });
+
+  it("accepts bare commands when something is selected", () => {
+    expect(one("$14")).toEqual({ cmd: "set_price", itemId: "margherita", price: 1400 });
+    expect(one("14.50")).toEqual({ cmd: "set_price", itemId: "margherita", price: 1450 });
+    expect(one("86")).toEqual({ cmd: "hide_item", itemId: "margherita" });
+    expect(one("sold out")).toEqual({ cmd: "hide_item", itemId: "margherita" });
+    expect(one("it's back")).toEqual({ cmd: "show_item", itemId: "margherita" });
+    expect(one("raise by $1")).toEqual({ cmd: "adjust_price", itemId: "margherita", deltaCents: 100 });
+    expect(one("rename to Classic Margherita")).toEqual({ cmd: "rename_item", itemId: "margherita", name: "Classic Margherita" });
+    expect(one("mark as vegan")).toEqual({ cmd: "add_dietary_tag", itemId: "margherita", tag: "vegan" });
+    expect(one("move to the top")).toEqual({ cmd: "reorder", kind: "item", id: "margherita", to: "top" });
+  });
+
+  it("still lets a named item win over the selection", () => {
+    expect(one("86 the burrata")).toEqual({ cmd: "hide_item", itemId: "burrata" });
+  });
+
+  it("works for a selected section", () => {
+    expect(one("hide this", { target: { kind: "category", id: "salads" } } as never)).toEqual({ cmd: "toggle_category", categoryId: "salads", visible: false });
+  });
+
+  it("ignores pronouns and bare commands without a valid selection", () => {
+    expect(parse("make this $14", menu).kind).toBe("none");
+    expect(parse("$14", menu).kind).toBe("none");
+    expect(parse("$14", menu, { target: { kind: "item", id: "no-such-item" } }).kind).toBe("none");
+    // An item-only command can't apply to a selected section.
+    expect(parse("make this $14", menu, { target: { kind: "category", id: "salads" } }).kind).toBe("none");
+  });
+});

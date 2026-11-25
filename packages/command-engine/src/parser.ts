@@ -14,6 +14,29 @@ export type ParseResult =
   | { kind: "clarify"; question: string; options: ClarifyOption[] }
   | { kind: "none" };
 
+/**
+ * What the owner has selected in the editor (clicking an item in the menu panel).
+ * "this", "it", "that one" and bare commands like "$14" or "86" then refer to it.
+ */
+export interface ParseContext {
+  target?: { kind: Target["kind"]; id: string };
+}
+
+const PRONOUN = /^(?:this|it|that|this one|that one|this item|that item|this dish|that dish|these|them|this section|that section|this category|the selected (?:item|one|dish|section))$/i;
+
+/** Bare commands that only make sense with a selection: "$14" -> "make it $14". */
+const BARE: Array<[RegExp, string]> = [
+  [/^(86|eighty[- ]six|hide|pull|remove|show|unhide|bring back|restore|put back)(?:\s+(?:it|this))?$/i, "$1 it"],
+  [/^(?:to\s+)?(\$\s*\d.*|\d{1,4}(?:\.\d{1,2})?(?:\s*(?:dollars|bucks))?)$/i, "make it $1"],
+  [/^(raise|increase|bump|lower|reduce|drop|cut)\s+(?:it\s+|the\s+price\s+)?by\s+(.+)$/i, "$1 it by $2"],
+  [/^(?:it'?s\s+|is\s+)?(sold out|out of stock|unavailable|back|available(?:\s+again)?)$/i, "it is $1"],
+  [/^(?:rename(?:\s+it)?|call\s+it)\s+(?:to\s+|as\s+)?(.+)$/i, "rename it to $1"],
+  [/^(?:describe(?:\s+it)?\s+as|(?:set|change|update)\s+(?:the\s+)?description\s+to)\s+(.+)$/i, "describe it as $1"],
+  [/^(mark|tag|label|flag)\s+(?:it\s+|this\s+)?as\s+(.+)$/i, "$1 it as $2"],
+  [/^(?:move|put)\s+(?:it\s+|this\s+)?(?:to\s+)?(?:the\s+)?(top|bottom|first|last|start|end)$/i, "move it to the $1"],
+  [/^(?:move|put)\s+(?:it\s+|this\s+)?(before|above|after|below|under)\s+(.+)$/i, "move it $1 $2"],
+];
+
 /** Cleans speech-to-text output: fillers, politeness, trailing punctuation. */
 export function normalizeUtterance(text: string): string {
   return text
@@ -314,12 +337,23 @@ const RULES: Rule[] = [
  * and repeatable. Returns "none" when nothing matches so the caller can decide
  * whether to spend tokens on the LLM fallback.
  */
-export function parse(utterance: string, menu: Menu): ParseResult {
-  const text = normalizeUtterance(utterance);
+export function parse(utterance: string, menu: Menu, ctx: ParseContext = {}): ParseResult {
+  let text = normalizeUtterance(utterance);
   if (!text) return { kind: "none" };
   for (const [re, action] of META) if (re.test(text)) return { kind: "meta", action };
 
+  const selected = selectedTarget(menu, ctx);
+  if (selected) {
+    for (const [re, to] of BARE) {
+      if (re.test(text)) {
+        text = text.replace(re, to);
+        break;
+      }
+    }
+  }
+
   const resolve: Resolve = (phrase, kind) => {
+    if (selected && PRONOUN.test(phrase.trim())) return !kind || kind === selected.kind ? selected : null;
     const r = match(menu, phrase, kind);
     if (r.best) return r.best;
     if (r.ambiguous.length) {
@@ -349,4 +383,16 @@ export function parse(utterance: string, menu: Menu): ParseResult {
     commands.push(hit);
   }
   return { kind: "commands", commands };
+}
+
+/** The selection from the editor, checked against the menu (a stale id is ignored). */
+export function selectedTarget(menu: Menu, ctx: ParseContext): Target | null {
+  const t = ctx.target;
+  if (!t) return null;
+  if (t.kind === "category") {
+    const c = menu.categories.find((x) => x.id === t.id);
+    return c ? { kind: "category", id: c.id, name: c.name } : null;
+  }
+  const i = menu.categories.flatMap((c) => c.items).find((x) => x.id === t.id);
+  return i ? { kind: "item", id: i.id, name: i.name } : null;
 }

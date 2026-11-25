@@ -71,13 +71,19 @@ async function type(text) {
   await page.click('form.cmd-form button[type="submit"]');
 }
 
+const history = (open) => page.locator(".edit-bar").getByRole("button", { name: /^History/ }).click().then(() => (open ? page.waitForSelector(".drawer") : null));
+const menuItem = (name) => page.getByRole("complementary", { name: "Menu items" }).getByRole("button", { name });
+
 await page.goto(ADMIN, { waitUntil: "networkidle" });
+await history(true);
 await page.getByRole("button", { name: "Reset demo data" }).click();
-await pause(800);
+await pause(600);
+await history(false);
+await pause(400);
 await caption("Owner-facing editor (Next.js). Edits are previews until approved and published.");
 await pause(2200);
 
-await caption("🎙 Push-to-talk: “Change the price of the margarita to $16.50” (built-in phrase: free, no credit)");
+await caption("Push-to-talk: “Change the price of the margarita to $16.50” (built-in phrase: free, no credit)");
 await speak("Change the price of the margarita to $16.50");
 await page.waitForSelector("section.change");
 await page.locator('[data-edit-id="item:margherita.price"]').scrollIntoViewIfNeeded();
@@ -87,12 +93,17 @@ await caption("Prices always need approval. Approve → written to the draft (Mo
 await page.getByRole("button", { name: "Approve" }).click();
 await pause(1600);
 
-await caption("Typed fallback: “86 the burrata”");
-await type("86 the burrata");
+await caption("Click an item in the menu panel to target it, then just say “86 it” (still free)");
+await menuItem(/Burrata/).click();
+await pause(1400);
+await type("86 it");
 await page.waitForSelector("section.change");
-await pause(1800);
+await pause(2200);
+await page.screenshot({ path: `${OUT}/editor-click-to-target.png` });
 await page.getByRole("button", { name: "Approve" }).click();
-await pause(1200);
+await pause(1000);
+await page.getByRole("button", { name: /^Clear selection/ }).click();
+await pause(400);
 
 await caption("Not a built-in phrase → AI fallback (1 credit): “knock a dollar off the smash burger”");
 await type("knock a dollar off the smash burger");
@@ -116,9 +127,12 @@ await page.getByRole("button", { name: "Reject" }).click();
 await pause(1400);
 
 await caption("Undo from history (free, refuses if a later edit touched the same field)");
+await history(true);
+await pause(900);
 await page.getByRole("button", { name: /Undo: Hide "Burrata/ }).click();
 await pause(1800);
-await page.screenshot({ path: `${OUT}/editor-history.png`, fullPage: true });
+await page.screenshot({ path: `${OUT}/editor-history.png` });
+await history(false);
 
 if (DEMO) {
   await caption("Publish → your private preview (the public demo never changes the live site)");

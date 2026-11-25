@@ -9,6 +9,8 @@ import {
   OpError,
   parse,
   revertOps,
+  selectedTarget,
+  type ParseContext,
   type CacheStore,
   type ClarifyOption,
   type FetchLike,
@@ -339,9 +341,17 @@ export class EditService {
     };
   }
 
-  async propose(slug: string, utterance: string, input: "voice" | "text" = "text", ctx: RequestCtx = {}): Promise<ProposeResult> {
+  async propose(
+    slug: string,
+    utterance: string,
+    input: "voice" | "text" = "text",
+    ctx: RequestCtx = {},
+    target?: ParseContext["target"],
+  ): Promise<ProposeResult> {
     const site = await this.site(slug);
-    const parsed = parse(utterance, site.draft);
+    // Deterministic first: the parser resolves "this"/"it" and bare commands ("$14") to the selection.
+    const parsed = parse(utterance, site.draft, { target });
+    const selected = selectedTarget(site.draft, { target });
 
     if (parsed.kind === "meta") return this.meta(slug, parsed.action);
     if (parsed.kind === "clarify") {
@@ -360,7 +370,9 @@ export class EditService {
       let charged = false;
       let fb;
       try {
-        fb = await llmFallback(utterance, site.draft, {
+        // Only if the parser can't: the model gets the selection as plain context.
+        const llmUtterance = selected ? `[Selected ${selected.kind}: "${selected.name}" (id ${selected.id})] ${utterance}` : utterance;
+        fb = await llmFallback(llmUtterance, site.draft, {
           config: this.d.llm,
           cache: mongoCache(this.c),
           fetchImpl: this.d.fetchImpl,

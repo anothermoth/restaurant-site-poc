@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import sample from "../../../data/sample-restaurant.menu.json";
 import { parseMenu } from "@restaurant-site-poc/menu-schema";
 import { Preview } from "../components/Preview.tsx";
@@ -162,5 +162,89 @@ describe("<Editor /> credits", () => {
     expect(screen.getByRole("note").textContent).toMatch(/resets after 60 minutes/);
     expect(screen.getByRole("link", { name: /Your published preview/ }).getAttribute("href")).toBe("/published");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("click-to-target", () => {
+  const base: SiteState = {
+    slug: "ember-and-elm",
+    draftVersion: 1,
+    publishedVersion: 1,
+    publishedAt: null,
+    unpublished: false,
+    settings: { autoApproveLowRisk: false },
+    draft: menu,
+    preview: menu,
+    pending: null,
+    history: [],
+    credits: { balance: 25, perAiCall: 1 },
+    activity: { parser: 0, ai: 0, aiCache: 0 },
+    demo: false,
+    sandboxIdleMinutes: null,
+  };
+  function serve() {
+    const calls: Array<{ url: string; body?: unknown }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+        const json = url.endsWith("/commands") ? { type: "change", autoApproved: false, change: { ...change, utterance: "make this $14" } } : base;
+        return { ok: true, status: 200, json: async () => json };
+      }),
+    );
+    return calls;
+  }
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("clicking an item in the menu panel makes it the target and sends it with the command", async () => {
+    const calls = serve();
+    render(<Editor slug="ember-and-elm" />);
+    const panel = await screen.findByRole("complementary", { name: "Menu items" });
+    const item = within(panel).getByRole("button", { name: /Margherita/ });
+    fireEvent.click(item);
+    expect(item.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Clear selection Margherita" })).toBeTruthy();
+    expect(document.querySelector('.pv [data-edit-id="item:margherita"]')!.classList.contains("sel")).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "make this $14" } });
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText("Command").closest("form")!);
+    });
+    const post = calls.find((c) => c.url.endsWith("/commands"))!;
+    expect(post.body).toEqual({ utterance: "make this $14", input: "text", target: { kind: "item", id: "margherita" } });
+  });
+
+  it("clears the target, and sends no target when nothing is selected", async () => {
+    const calls = serve();
+    render(<Editor slug="ember-and-elm" />);
+    const panel = await screen.findByRole("complementary", { name: "Menu items" });
+    fireEvent.click(within(panel).getByRole("button", { name: /Burrata/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Clear selection/ }));
+    expect(screen.queryByRole("button", { name: /Clear selection/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "86 the burrata" } });
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText("Command").closest("form")!);
+    });
+    expect(calls.find((c) => c.url.endsWith("/commands"))!.body).toEqual({ utterance: "86 the burrata", input: "text" });
+  });
+
+  it("clicking an item or section in the preview selects it too", async () => {
+    serve();
+    const { container } = render(<Editor slug="ember-and-elm" />);
+    await screen.findByTestId("credits");
+    fireEvent.click(container.querySelector('.pv [data-edit-id="item:tiramisu"]')!);
+    expect(screen.getByRole("button", { name: "Clear selection Tiramisu" })).toBeTruthy();
+    fireEvent.click(container.querySelector('.pv [data-edit-id="category:salads"] h2')!);
+    expect(screen.getByRole("button", { name: "Clear selection Salads" })).toBeTruthy();
+  });
+
+  it("filters the menu panel by search", async () => {
+    serve();
+    render(<Editor slug="ember-and-elm" />);
+    const panel = await screen.findByRole("complementary", { name: "Menu items" });
+    fireEvent.change(within(panel).getByLabelText("Search the menu"), { target: { value: "burger" } });
+    const names = within(panel).getAllByRole("button", { pressed: false }).map((b) => b.textContent);
+    expect(names.some((n) => n?.includes("Double Smash Burger"))).toBe(true);
+    expect(names.some((n) => n?.includes("Margherita"))).toBe(false);
   });
 });
