@@ -1,12 +1,13 @@
 ---
 import Base from "../layouts/Base.astro";
 import Photo from "../components/Photo.astro";
+import { menu } from "../lib/data.ts";
 import sources from "../../../../data/photos/sources.json";
 
 type Source = { by: string; byUrl: string; url: string; title: string };
 const photos = Object.entries(sources as Record<string, Source>);
 ---
-<Base title="Photo credits" description="Credits for the food photography used on this sample site." noindex>
+<Base title={`Photo credits | ${menu.restaurant.name}`} description="Credits for the food photography used on this sample site." noindex>
   <div class="wrap section report">
     <h1>Photo credits</h1>
     <p class="muted">

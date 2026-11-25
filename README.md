@@ -24,7 +24,7 @@ Deploy steps: [docs/deploy.md](docs/deploy.md).
 |---|---|---|
 | ![Home](docs/screenshot-home.png) | ![Modifiers](docs/screenshot-modifiers.png) | ![Cart](docs/screenshot-cart.png) |
 
-Before/after screenshots of the Nov 2026 visual redesign (desktop and mobile, site and editor) are in [`docs/redesign/`](docs/redesign/).
+Design iterations, each with before/after screenshots (desktop and mobile): [`docs/redesign/`](docs/redesign/) (real photos), [`docs/redesign-v2/`](docs/redesign-v2/) (owner-first editor), [`docs/redesign-v3/`](docs/redesign-v3/) (classic menu list), [`docs/redesign-v4/`](docs/redesign-v4/) (home page spacing). Earlier versions are tagged `editor-v1-busy`, `site-v2` and `site-v3`.
 
 ## Why this exists
 
@@ -51,9 +51,9 @@ apps/
 data/
   sample-restaurant.menu.json   fictional sample menu (with seeded problems)
   menu-report.llm.json          saved report from one real LLM run (see below)
+  photos/                       self-hosted Pexels photos (+ sources.json); see CREDITS.md
 docs/
   token-costs.json              measured parser vs. LLM token usage (see below)
-  photos/                       self-hosted Pexels photos (+ sources.json); see CREDITS.md
 scripts/          Lighthouse runner, screenshots, editor photo thumbnails, token measurement, demo recorder
 ```
 
@@ -65,8 +65,8 @@ scripts/          Lighthouse runner, screenshots, editor photo thumbnails, token
 
 ### 2. Site generator (`apps/site`)
 
-- **Design**: a full-bleed photo hero, Instrument Serif for display type with Inter for text (both self-hosted, latin subset, preloaded), a warm restrained palette, a classic menu list (serif dish names, dotted leaders to menu-style prices, dietary notes in plain words like "Vegetarian · Contains dairy & gluten") with one feature photo per section that alternates sides on desktop and sits above the list on phones, a sticky order button (a bottom bar on mobile) and a modifier sheet that slides up from the bottom on phones. Photos go through Astro's `<Picture>`: AVIF and WebP at several widths with `srcset`/`sizes`, explicit dimensions, lazy below the fold and `fetchpriority="high"` on the hero. Because photos are per section rather than per dish, dishes without a photo or description leave no holes. The pre-v3 card layout is tagged [`site-v2`](../../tree/site-v2); before and after screenshots (desktop and mobile, home, menu and the editor preview, which uses the same design) are in [`docs/redesign-v3/`](docs/redesign-v3/). A follow-up pass on the home page's spacing (favorites as a short list on phones, a one-row footer that doesn't repeat the Visit section, tighter section padding) is tagged from [`site-v3`](../../tree/site-v3), with screenshots in [`docs/redesign-v4/`](docs/redesign-v4/).
-- **Home**: hero, featured items, hours, address. **Menu**: sections with sticky category nav, prices, dietary badges and allergen notes, "Add" buttons. **Admin report**: the checker's findings (marked `noindex`).
+- **Design**: a full-bleed photo hero, Instrument Serif for display type with Inter for text (both self-hosted, latin subset, preloaded), a warm restrained palette, a classic menu list (serif dish names, dotted leaders to menu-style prices, dietary notes in plain words like "Vegetarian · Contains dairy & gluten") with one feature photo per section that alternates sides on desktop and sits above the list on phones, a sticky order button (a bottom bar on mobile) and a modifier sheet that slides up from the bottom on phones. Photos go through Astro's `<Picture>`: AVIF and WebP at several widths with `srcset`/`sizes`, explicit dimensions, lazy below the fold and `fetchpriority="high"` on the hero. Because photos are per section rather than per dish, dishes without a photo or description leave no holes. The editor's preview renders the same design.
+- **Home**: hero, featured items, hours, address. **Menu**: sections with sticky category nav, prices, plain-word dietary and allergen notes, "Add" buttons. **Admin report**: the checker's findings (marked `noindex`).
 - **One React island** (`Cart.tsx`, `client:idle`). The menu itself is plain HTML; the island attaches one delegated click listener for `[data-add-item]` buttons, opens a modifier picker for items with modifier groups, keeps the cart in `localStorage`, and prices it with the same `priceCart()`.
 - **SEO**: per-page title/description, canonical URL, Open Graph tags, `robots.txt`, and **JSON-LD**: `Restaurant` (address, hours, cuisine) on every page, with a full `Menu` → `MenuSection` → `MenuItem` → `Offer` tree (plus `suitableForDiet`) on `/menu`. JSON-LD is escaped so menu text can't break out of the script tag.
 - **Build-time publish pipeline**: validate with zod → run deterministic checks → apply safe auto-fixes → render. So "GARLIC KNOTS" ships as "Garlic Knots", but the $185.00 Truffle Pie stays on the page and gets flagged for the owner, because changing a price automatically isn't safe.
@@ -117,14 +117,14 @@ CLI options: `--json <file>` (full report), `--fix <file>` (write the auto-fixed
 | **Internal margin view (`/dev`)** | |
 | ![Margin](docs/dev-margin.png) | |
 
-The editor is designed for a restaurant owner on a phone between rushes, so it does one thing at a time. It asks one question, "What would you like to change?", above a big text box with a hold-to-talk mic and three plain-language ideas ("We're out of the burrata", "The margherita is now $16.50", "We're closed on Mondays"). The ideas are all handled by the built-in phrases, so they never cost an AI credit. Next to the box (below it on a phone) is the live preview of the site. A change appears as a short "Check this change" card: what changes, the old value crossed out, the new value, one big Approve and a quiet Discard. The technical diff, menu-check effects and cost sit behind "Details", and the preview scrolls to the highlighted spot. Publish is the one button top right: indigo with a count when there's something to publish, greyed out with a reason when there isn't. Everything else is one tap away but out of sight. "Or pick something from your menu" opens a searchable menu sheet; picking an item (or tapping it in the preview) makes it the target, so "make it $14" or "we're out of this" work, and the checker's findings show there as quiet notes. The ⋯ menu holds publish status, recent changes with undo, settings, the published preview link, credits and the demo reset. The pre-redesign editor is tagged [`editor-v1-busy`](../../tree/editor-v1-busy); before and after screenshots are in [`docs/redesign-v2/`](docs/redesign-v2/). Nothing reaches the public site until the owner approves the change and publishes.
+The editor is designed for a restaurant owner on a phone between rushes, so it does one thing at a time. It asks one question, "What would you like to change?", above a big text box with a hold-to-talk mic and three plain-language ideas ("We're out of the burrata", "The margherita is now $16.50", "We're closed on Mondays"). The ideas are all handled by the built-in phrases, so they never cost an AI credit. Next to the box (below it on a phone) is the live preview of the site. A change appears as a short "Check this change" card: what changes, the old value crossed out, the new value, one big Approve and a quiet Discard. The technical diff, menu-check effects and cost sit behind "Details", and the preview scrolls to the highlighted spot. Publish is the one button top right: indigo with a count when there's something to publish, greyed out with a reason when there isn't. Everything else is one tap away but out of sight. "Or pick something from your menu" opens a searchable menu sheet; picking an item (or tapping it in the preview) makes it the target, so "make it $14" or "we're out of this" work, and the checker's findings show there as quiet notes. The ⋯ menu holds publish status, recent changes with undo, settings, the published preview link, credits and the demo reset. Nothing reaches the public site until the owner approves the change and publishes.
 
 ```mermaid
 flowchart LR
   subgraph Browser["Admin (Next.js App Router)"]
     MIC["Push-to-talk<br/>Web Speech API"] --> TXT["Transcript or typed text"]
     PV["Live preview<br/>data-edit-id highlights"]
-    CARD["Diff card<br/>Approve / Reject"]
+    CARD["Change card<br/>Approve / Discard"]
     HIST["History + Undo"]
   end
   TXT -->|"POST /commands"| API
@@ -180,15 +180,15 @@ The model is only a fallback, and its calls are kept small: a compact catalog (`
 | Cold cache | 21 | 15 | 6 | 0 | 4,264 (1,280) | 142 | **$0.0043** |
 | Warm cache | 21 | 15 | 0 | 6 | 0 | 0 | **$0** |
 
-- About 710 input and 12–45 output tokens per model call, roughly **$0.0007 per call**, at 0.5–0.7 s. When the provider's prompt cache hits most of the system prompt (640 of 710 tokens, as in the demo recording), a call costs about $0.0003.
+- About 710 input and 12–45 output tokens per model call, roughly **$0.0007 per call**, at 0.5–0.7 s. When the provider's prompt cache hits most of the system prompt (640 of 710 tokens), a call costs about $0.0003.
 - That works out to roughly 1,400 off-grammar commands per dollar before the utterance cache. Undo, approve, reject and publish never call the model.
 - All six model results in the corpus were correct: four edits, one correctly skipped ("the market greens are gluten free and vegan": already tagged), and one refusal (the banner request).
 
 ### 5. Credits and the public demo
 
-**Credits.** Each restaurant (and, in demo mode, each visitor's sandbox) has a credit balance in MongoDB, `CREDITS_DEFAULT` (100) to start. Built-in phrases the parser understands are free, and so are AI answers reused from the cache. A request that needs a real model call costs 1 credit. The top bar shows "N credits left", never dollars. At 0 the AI fallback pauses with a friendly message ("You're out of AI credits… built-in phrases still work") and no model call is made; parser commands keep working. Credits are taken atomically (`$gte: 1` + `$inc: -1`) before the call and refunded if the call fails. Resetting the demo restores the menu but not the credits.
+**Credits.** Each restaurant (and, in demo mode, each visitor's sandbox) has a credit balance in MongoDB, `CREDITS_DEFAULT` to start (100 by default; the live demo gives each visitor 25). Built-in phrases the parser understands are free, and so are AI answers reused from the cache. A request that needs a real model call costs 1 credit. The top bar shows "N credits left", never dollars. At 0 the AI fallback pauses with a friendly message ("You're out of AI credits… built-in phrases still work") and no model call is made; parser commands keep working. Credits are taken atomically (`$gte: 1` + `$inc: -1`) before the call and refunded if the call fails. Resetting the demo restores the menu but not the credits.
 
-**Margin, internally.** Each real call is logged with its input, cached and output tokens and its dollar cost at list price. `GET /api/admin/margin` (with `x-admin-token`) and the `/dev` page compare that with what the credits would bill at `CREDIT_PRICE_USD` ($0.01 by default), per UTC day and per restaurant. The screenshot above is real: two calls from the demo recording cost $0.00054 in total ($0.00027 each, with 640 of 710 prompt tokens cached by the provider), against $0.02 of credits.
+**Margin, internally.** Each real call is logged with its input, cached and output tokens and its dollar cost at list price. `GET /api/admin/margin` (with `x-admin-token`) and the `/dev` page compare that with what the credits would bill at `CREDIT_PRICE_USD` ($0.01 by default), per UTC day and per restaurant. The screenshot above is real: the one AI call on the live demo that day (from an earlier recording) cost $0.00081 (710 prompt tokens, 128 of them cached by the provider, 22 output), against $0.01 of credits.
 
 **Public demo safeguards (`DEMO_MODE=1`):**
 
@@ -203,20 +203,18 @@ All of this is covered by tests against a real MongoDB (`apps/api/test/credits-d
 
 ## Performance (measured)
 
-Lighthouse 13.6.0 on Chrome 156 (headless), run locally against the production build served by `astro preview` on localhost. Mobile uses Lighthouse's default simulated throttling (slow 4G, 4x CPU slowdown). Measured on Nov 24, 2026. Raw summary: [`docs/lighthouse-summary.json`](docs/lighthouse-summary.json).
+**Live site (Cloudflare Pages, real photos).** Lighthouse 13.6.0 on Chrome 156 (headless) against https://restaurant-site-poc.pages.dev over the real network, from the build machine, Nov 24, 2026, 10:16 PM CST. Mobile uses Lighthouse's default simulated throttling (slow 4G, 4x CPU slowdown). Raw: [`docs/lighthouse-live.json`](docs/lighthouse-live.json) (it also keeps the earlier runs).
 
 | Page | Mode | Performance | Accessibility | Best Practices | SEO | LCP | FCP | TBT | CLS | Transfer |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `/` | mobile | 100 | 100 | 100 | 100 | 0.9 s | 0.6 s | 20 ms | 0 | 9 KiB |
-| `/` | desktop | 100 | 100 | 100 | 100 | 0.2 s | 0.2 s | 0 ms | 0 | 9 KiB |
-| `/menu` | mobile | 100 | 100 | 100 | 100 | 0.7 s | 0.7 s | 0 ms | 0 | 96 KiB |
-| `/menu` | desktop | 100 | 100 | 100 | 100 | 0.2 s | 0.2 s | 0 ms | 0 | 96 KiB |
+| `/` | mobile | 100 | 100 | 100 | 100 | 1.4 s | 0.9 s | 0 ms | 0 | 331 KiB |
+| `/` | desktop | 100 | 100 | 100 | 100 | 0.4 s | 0.3 s | 0 ms | 0 | 318 KiB |
+| `/menu` | mobile | 100 | 100 | 100 | 100 | 1.2 s | 1.0 s | 0 ms | 0 | 330 KiB |
+| `/menu` | desktop | 100 | 100 | 100 | 100 | 0.4 s | 0.3 s | 0 ms | 0 | 271 KiB |
 
-Caveats: this is a lab test on localhost, with no CDN and no network latency, a small sample menu, SVG placeholder images (this local run predates the photo redesign), and none of the third-party analytics tags a real restaurant site carries. Owner's 5.4s → 0.7s numbers are p75 field data across real traffic; these are not comparable to that, they only show the architecture starts fast. The home page ships no JavaScript. On `/menu`, the cart island is about 8 KB of app code plus React's runtime, loaded at idle.
+LCP is the hero photo on `/`. Almost all of the transfer is responsive AVIF images and two woff2 fonts. The home page ships no JavaScript; on `/menu` the cart island is about 8 KB of app code plus React's runtime, loaded at idle. It's one lab run from one location, not field data: Owner's 5.4s → 0.7s numbers are p75 field data across real traffic, so these aren't comparable to that; they only show the architecture starts fast.
 
-Reproduce: `npm run build && npm run lighthouse` (needs Chrome installed). These numbers were measured before the editor work added `data-edit-id` attributes to the pages.
-
-**Deployed (Cloudflare Pages), with real photos.** After the redesign, the same Lighthouse run against https://restaurant-site-poc.pages.dev over the real network (from the build machine, Nov 24, 2026, 9:00 PM CST; raw: [`docs/lighthouse-live.json`](docs/lighthouse-live.json), which also keeps the pre-redesign run) scored 100 in all four categories on `/` and `/menu`, in both modes. LCP is now the hero photo: 1.4 s on mobile and 0.4 s on desktop for `/`, 1.0 s and 0.3 s for `/menu`; CLS 0, TBT 0 ms. Total transfer is about 310–320 KiB for `/` and 290–300 KiB for `/menu`, almost all of it responsive AVIF images and two woff2 fonts (before the redesign, with SVG placeholders: LCP 0.9 s mobile, 7 KiB and 91 KiB). After the v3 visual pass (classic menu list, Nov 24, 2026, 9:59 PM CST) it is still 100 in all four categories on both pages and modes: mobile LCP 1.4 s for `/` and 1.5 s for `/menu`, desktop 0.4 s for both, CLS 0, TBT 0–50 ms. After the v4 pass (home page rhythm, compact footer; Nov 24, 2026, 10:16 PM CST) all four categories are 100 on both pages in both modes: mobile LCP 1.4 s for `/` and 1.2 s for `/menu`, desktop 0.4 s, CLS 0, TBT 0 ms. It's still one lab run from one location, not field data.
+**Earlier baseline (localhost, SVG placeholders).** Before the real photos, the same audit against `astro preview` on localhost (raw: [`docs/lighthouse-summary.json`](docs/lighthouse-summary.json)) also scored 100 across the board, with mobile LCP 0.9 s for `/` and 0.7 s for `/menu` and 9 KiB / 96 KiB transferred. Reproduce locally with `npm run build && npm run lighthouse`, or against any URL with `BASE_URL=… bash scripts/lighthouse.sh` (needs Chrome).
 
 ## Run it
 
@@ -264,7 +262,7 @@ CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB
 
 ## Design decisions and trade-offs
 
-- **Astro over Next.js static export.** I had an earlier Next.js 16 prototype of an Owner-style site (a private `owner-clone` repo), but it was a mobile-first page over hardcoded data, so it didn't give much of a head start. Astro's model (markup by default, opt-in hydration per island) is exactly what this page type needs. It's also what Owner moved to, so the comparison is direct. Next.js static export would ship the React runtime and hydrate the whole page by default. I kept the earlier prototype's single-column, mobile-first card layout.
+- **Astro over Next.js static export.** I had an earlier Next.js 16 prototype of an Owner-style site (a private `owner-clone` repo), but it was a mobile-first page over hardcoded data, so it didn't give much of a head start. Astro's model (markup by default, opt-in hydration per island) is exactly what this page type needs. It's also what Owner moved to, so the comparison is direct. Next.js static export would ship the React runtime and hydrate the whole page by default.
 - **One island, delegated events.** I could have made every "Add" button its own island, but that would mean many hydration roots. Instead the menu stays static HTML, and one island owns all cart and modifier state, which mirrors Owner's "ordering flow in a single React island".
 - **Island props are trimmed.** The cart island only gets ids, names, prices and modifier groups (no descriptions or photos), so the serialized props stay small. Zod stays out of the browser bundle: the island imports the zod-free `pricing` module. That took the island from about 94 KB to about 8 KB.
 - **Integer cents and server-shaped pricing.** `priceCart()` is the same function a server checkout would call. The browser only ever sends ids and quantities.
@@ -277,9 +275,9 @@ CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB
 
 ### Not built (yet)
 
-A server-side checkout endpoint; per-restaurant edge caching and revalidation with Workers; sign-in for the editor (outside demo mode it has no auth, so it's for local use only); photo-quality checks (resolution, blur); per-location menus and hours exceptions; running the checker across many menus in batch; auth and multi-user roles for the editor; adding new items or modifier groups by voice; per-page revalidation instead of a full rebuild on publish.
+A server-side checkout endpoint; per-restaurant edge caching and revalidation with Workers; sign-in and multi-user roles for the editor (outside demo mode it has no auth, so it's for local use only); photo-quality checks (resolution, blur); per-location menus and hours exceptions; running the checker across many menus in batch; adding new items or modifier groups by voice; per-page revalidation instead of a full rebuild on publish.
 
-Both are deployed on free tiers: the static site on Cloudflare Pages, and the editor on Vercel Hobby + Atlas M0 in demo mode (sandboxes, rate limits, $0.50/day spend cap).
+The two live apps run on free tiers: the static site on Cloudflare Pages, and the editor on Vercel Hobby + Atlas M0 in demo mode (sandboxes, rate limits, $0.50/day spend cap).
 
 ## How this was built
 

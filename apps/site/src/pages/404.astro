@@ -1,0 +1,15 @@
+---
+import Base from "../layouts/Base.astro";
+import { menu } from "../lib/data.ts";
+---
+<Base title={`Page not found | ${menu.restaurant.name}`} description="This page doesn't exist." noindex>
+  <section class="wrap not-found">
+    <p class="eyebrow eyebrow-dark">404</p>
+    <h1 class="title">We couldn't find that page.</h1>
+    <p class="muted">It may have moved, or the link may be mistyped.</p>
+    <div class="cta-row">
+      <a class="btn btn-accent" href="/menu">See the menu</a>
+      <a class="btn btn-quiet-dark" href="/">Home</a>
+    </div>
+  </section>
+</Base>

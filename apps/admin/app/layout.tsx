@@ -5,8 +5,13 @@ import "@fontsource/instrument-serif/latin-400.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Site editor · restaurant-site-poc",
+  title: "Site editor · Ember & Elm Kitchen (demo)",
   description: "Voice-driven, owner-approved edits to a restaurant website.",
+  openGraph: {
+    title: "Restaurant site editor (demo)",
+    description: "Say or type a change to a restaurant's menu, check it, approve it, publish it.",
+    type: "website",
+  },
   robots: { index: false, follow: false },
 };
 

@@ -6,6 +6,7 @@ import serifItalicUrl from "@fontsource/instrument-serif/files/instrument-serif-
 import { serializeJsonLd } from "../lib/jsonld.ts";
 import { menu } from "../lib/data.ts";
 import { clock, closedDays, dayRange } from "../lib/hours.ts";
+import { photoUrl } from "../lib/photos.ts";
 
 interface Props {
   title: string;
@@ -21,7 +22,9 @@ interface Props {
 const { title, description, jsonLd, noindex = false, ogImage, header = "solid", footerContact = true } = Astro.props;
 const r = menu.restaurant;
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
-const image = ogImage ? new URL(ogImage, Astro.site).toString() : undefined;
+// Every page shares the hero photo as its social preview unless it passes its own.
+const og = ogImage ?? (r.heroPhoto ? await photoUrl(r.heroPhoto.src) : undefined);
+const image = og ? new URL(og, Astro.site).toString() : undefined;
 const closed = closedDays(r.hours);
 const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 // Set EDITOR_URL at build time to link the public demo editor from the footer.
