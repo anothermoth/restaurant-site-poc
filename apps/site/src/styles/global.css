@@ -154,7 +154,8 @@ address a { text-decoration: none; }
 /* Menu page */
 .menu-hero { padding-top: clamp(40px, 7vw, 80px); padding-bottom: 28px; }
 .cat-nav { position: sticky; top: 68px; z-index: 15; background: rgba(250, 247, 242, .92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
-.cat-row { display: flex; gap: 28px; overflow-x: auto; scrollbar-width: none; }
+.cat-row { display: flex; gap: 28px; overflow-x: auto; scrollbar-width: none; scroll-padding-inline: 20px; }
+@media (min-width: 768px) { .cat-row { scroll-padding-inline: 40px; } }
 .cat-row::-webkit-scrollbar { display: none; }
 .cat-row a { white-space: nowrap; text-decoration: none; font-size: .92rem; font-weight: 500; color: var(--muted); padding: 16px 0 14px; border-bottom: 2px solid transparent; transition: color .2s, border-color .2s; }
 .cat-row a:hover { color: var(--ink); }
