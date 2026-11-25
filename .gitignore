@@ -12,3 +12,6 @@ coverage/
 next-env.d.ts
 data/published/
 test-results/
+.vercel
+.env*
+!.env.example

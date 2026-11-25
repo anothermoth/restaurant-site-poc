@@ -48,8 +48,12 @@ Nothing needs creating by hand. On first request the app creates its collections
 
 ```bash
 npx vercel login
-# From the repo root (npm workspaces live here). When asked "In which directory is your code located?", answer apps/admin.
-npx vercel link
+npx vercel project create restaurant-site-poc-editor
+# Root Directory = apps/admin, but install from the repo root so the npm workspaces resolve
+# (installing inside apps/admin alone misses TypeScript and the workspace packages).
+npx vercel project update restaurant-site-poc-editor --root-directory apps/admin --framework nextjs \
+  --node-version 24.x --install-command "cd ../.. && npm ci"
+npx vercel link --yes --project restaurant-site-poc-editor   # run from the repo root
 ```
 
 Set the environment variables (production). Values marked *secret* must only go into Vercel and never into the repo:
@@ -69,7 +73,7 @@ Set the environment variables (production). Values marked *secret* must only go 
 | `PUBLIC_SITE_URL` | `https://restaurant-site-poc.pages.dev` | |
 
 ```bash
-for v in MONGO_URL XAI_API_KEY ADMIN_TOKEN; do npx vercel env add $v production; done   # prompts for each value
+for v in MONGO_URL XAI_API_KEY ADMIN_TOKEN; do npx vercel env add $v production --sensitive; done   # prompts for each value
 printf '1' | npx vercel env add DEMO_MODE production
 printf 'rsp_public_demo' | npx vercel env add MONGO_DB production
 printf '0.50' | npx vercel env add LLM_DAILY_CAP_USD production
