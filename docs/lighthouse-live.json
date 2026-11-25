@@ -1,8 +1,8 @@
 {
-  "measuredAt": "2026-11-25T03:59:21.798Z",
+  "measuredAt": "2026-11-25T04:16:22.171Z",
   "url": "https://restaurant-site-poc.pages.dev",
   "tool": "Lighthouse 13.6.0, Chrome/156.0.0.0",
-  "note": "Lighthouse against the deployed Cloudflare Pages site from the build machine, after the v3 visual pass (classic menu list, one feature photo per section); mobile uses default simulated throttling (slow 4G, 4x CPU).",
+  "note": "Lighthouse against the deployed Cloudflare Pages site from the build machine, after the v4 pass (home page rhythm, compact footer, brighter burger photo); mobile uses default simulated throttling (slow 4G, 4x CPU).",
   "results": {
     "home-desktop": {
       "performance": 100,
@@ -13,7 +13,7 @@
       "fcp": "0.3 s",
       "tbt": "0 ms",
       "cls": "0",
-      "transferKiB": 311
+      "transferKiB": 318
     },
     "home-mobile": {
       "performance": 100,
@@ -22,9 +22,9 @@
       "seo": 100,
       "lcp": "1.4 s",
       "fcp": "0.9 s",
-      "tbt": "50 ms",
+      "tbt": "0 ms",
       "cls": "0",
-      "transferKiB": 317
+      "transferKiB": 331
     },
     "menu-desktop": {
       "performance": 100,
@@ -35,18 +35,67 @@
       "fcp": "0.3 s",
       "tbt": "0 ms",
       "cls": "0",
-      "transferKiB": 262
+      "transferKiB": 271
     },
     "menu-mobile": {
       "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "lcp": "1.5 s",
+      "lcp": "1.2 s",
       "fcp": "1.0 s",
       "tbt": "0 ms",
       "cls": "0",
-      "transferKiB": 312
+      "transferKiB": 330
+    }
+  },
+  "previousRunV3": {
+    "measuredAt": "2026-11-25T03:59:21.798Z",
+    "results": {
+      "home-desktop": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "0.4 s",
+        "fcp": "0.3 s",
+        "tbt": "0 ms",
+        "cls": "0",
+        "transferKiB": 311
+      },
+      "home-mobile": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "1.4 s",
+        "fcp": "0.9 s",
+        "tbt": "50 ms",
+        "cls": "0",
+        "transferKiB": 317
+      },
+      "menu-desktop": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "0.4 s",
+        "fcp": "0.3 s",
+        "tbt": "0 ms",
+        "cls": "0",
+        "transferKiB": 262
+      },
+      "menu-mobile": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "1.5 s",
+        "fcp": "1.0 s",
+        "tbt": "0 ms",
+        "cls": "0",
+        "transferKiB": 312
+      }
     }
   },
   "previousRunPhotoRedesign": {

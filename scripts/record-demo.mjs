@@ -1,30 +1,32 @@
 /* global window, document */
 /**
- * Records the demo video and screenshots against a running stack. Two modes:
- * - DEMO_MODE=1 admin (`next start`, in-process API, :3000) with ADMIN_TOKEN set:
- *   publish goes to the visitor's private preview, and the run ends at 0 credits;
- * - otherwise: Express API (:4000) + admin + `astro preview` (:4321), publish rebuilds Astro.
- * Speech recognition is simulated in the recording (headless Chrome has no mic):
- * a stand-in SpeechRecognition returns a scripted transcript when the
- * push-to-talk button is released. Everything after the transcript is real.
+ * Records the demo video (docs/demo.webm, converted to demo.mp4/demo.gif by
+ * scripts/demo-media.sh) and the README editor screenshots against the owner-first
+ * editor (v2). Defaults to the live public demo; every request is a built-in phrase,
+ * so the run never calls the AI model.
  *
- *   CHROME_PATH=/usr/bin/google-chrome node scripts/record-demo.mjs
+ *   ADMIN_TOKEN=… node scripts/record-demo.mjs [editorUrl] [siteUrl]
+ *
+ * ADMIN_TOKEN (optional) sets this visitor's credits to 0 near the end to show the
+ * "AI helper paused" state, and captures the internal margin view (/dev).
+ * Speech recognition is simulated (headless Chrome has no mic): a stand-in
+ * SpeechRecognition returns a scripted transcript when the mic button is released.
+ * Everything after the transcript is the real stack.
  */
 import { chromium } from "playwright-core";
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 
-const ADMIN = process.env.ADMIN_URL ?? "http://localhost:3000";
-const SITE = process.env.SITE_URL ?? "http://localhost:4321";
+const [ADMIN = "https://restaurant-site-poc-editor.vercel.app", SITE = "https://restaurant-site-poc.pages.dev"] = process.argv.slice(2);
 const OUT = "docs";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN ?? "";
-const DEMO = (await (await fetch(`${ADMIN}/api/health`)).json()).demo === true;
 const VID = "docs/.video-tmp";
 rmSync(VID, { recursive: true, force: true });
 mkdirSync(VID, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome", args: ["--no-sandbox"] });
-const context = await browser.newContext({ viewport: { width: 1366, height: 860 }, recordVideo: { dir: VID, size: { width: 1366, height: 860 } } });
+const size = { width: 1366, height: 860 };
+const context = await browser.newContext({ viewport: size, recordVideo: { dir: VID, size } });
 await context.addInitScript(() => {
   class FakeRecognition {
     start() {}
@@ -48,7 +50,7 @@ async function caption(text) {
     if (!el) {
       el = document.createElement("div");
       el.id = "demo-caption";
-      el.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;background:rgba(17,17,17,.88);color:#fff;font:600 17px system-ui;padding:10px 18px;border-radius:12px;max-width:90%;text-align:center";
+      el.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;background:rgba(17,17,17,.88);color:#fff;font:600 17px system-ui;padding:10px 18px;border-radius:12px;max-width:90%;text-align:center;pointer-events:none";
       document.body.appendChild(el);
     }
     el.textContent = t;
@@ -67,85 +69,88 @@ async function speak(transcript) {
 
 async function type(text) {
   await page.fill("#cmd", "");
-  await page.type("#cmd", text, { delay: 25 });
-  await page.click('form.cmd-form button[type="submit"]');
+  await page.type("#cmd", text, { delay: 30 });
+  await page.press("#cmd", "Enter");
 }
 
-const history = (open) => page.locator(".edit-bar").getByRole("button", { name: /^History/ }).click().then(() => (open ? page.waitForSelector(".drawer") : null));
-const menuItem = (name) => page.getByRole("complementary", { name: "Menu items" }).getByRole("button", { name });
+const card = () => page.waitForSelector('section[aria-label="Pending change"]', { timeout: 20000 });
+const approve = async () => {
+  await page.getByRole("button", { name: "Approve" }).click();
+  await page.waitForSelector('section[aria-label="Pending change"]', { state: "detached" });
+};
+const more = async (item) => {
+  await page.getByRole("button", { name: "More" }).click();
+  await pause(500);
+  await page.getByRole("menuitem", { name: item }).click();
+};
+const recent = () => page.getByRole("complementary", { name: "Recent changes" });
 
 await page.goto(ADMIN, { waitUntil: "networkidle" });
-await history(true);
-await page.getByRole("button", { name: "Reset demo data" }).click();
+// A new browser context is a new visitor, so this run starts from a fresh copy of the sample menu.
 await pause(600);
-await history(false);
-await pause(400);
-await caption("Owner-facing editor (Next.js). Edits are previews until approved and published.");
-await pause(2200);
 
-await caption("Push-to-talk: “Change the price of the margarita to $16.50” (built-in phrase: free, no credit)");
+await caption("The owner's editor: one question, a live preview of the site. Nothing goes live until you publish.");
+await pause(3000);
+
+await caption("Hold the mic: “Change the price of the margarita to $16.50” (a built-in phrase: free)");
 await speak("Change the price of the margarita to $16.50");
-await page.waitForSelector("section.change");
-await page.locator('[data-edit-id="item:margherita.price"]').scrollIntoViewIfNeeded();
-await pause(2600);
+await card();
+await pause(2800);
 await page.screenshot({ path: `${OUT}/editor-pending-price.png` });
-await caption("Prices always need approval. Approve → written to the draft (MongoDB, versioned).");
-await page.getByRole("button", { name: "Approve" }).click();
-await pause(1600);
-
-await caption("Click an item in the menu panel to target it, then just say “86 it” (still free)");
-await menuItem(/Burrata/).click();
+await caption("Prices always wait for your OK. Approve saves it to the draft.");
 await pause(1400);
+await approve();
+await pause(1400);
+
+await caption("Or pick something from your menu, then just say what changed");
+await page.getByRole("button", { name: /pick something from your menu/i }).click();
+await pause(900);
+await page.getByRole("complementary", { name: "Menu items" }).getByRole("button", { name: /Burrata/ }).click();
+await pause(1200);
 await type("86 it");
-await page.waitForSelector("section.change");
+await card();
 await pause(2200);
 await page.screenshot({ path: `${OUT}/editor-click-to-target.png` });
-await page.getByRole("button", { name: "Approve" }).click();
-await pause(1000);
-await page.getByRole("button", { name: /^Clear selection/ }).click();
-await pause(400);
+await approve();
+await pause(900);
+await page.getByRole("button", { name: /^Clear selection/ }).click().catch(() => {});
+await pause(500);
 
-await caption("Not a built-in phrase → AI fallback (1 credit): “knock a dollar off the smash burger”");
-await type("knock a dollar off the smash burger");
-await page.waitForSelector("section.change", { timeout: 15000 });
-await page.locator('[data-edit-id="item:smash-burger.price"]').scrollIntoViewIfNeeded();
-await pause(3200);
-await page.screenshot({ path: `${OUT}/editor-llm-fallback.png` });
-await page.getByRole("button", { name: "Approve" }).click();
-await pause(1200);
-
-await caption("Ambiguous name → it asks instead of guessing");
+await caption("Two dishes match? It asks instead of guessing.");
 await type("hide the caesar salad");
 await page.waitForSelector(".reply .options");
-await pause(2000);
+await pause(2400);
 await page.screenshot({ path: `${OUT}/editor-clarify.png` });
-await page.locator(".reply .options button").last().click();
-await page.waitForSelector("section.change");
+await page.locator(".reply .options button").first().click();
+await card();
 await pause(1400);
-await caption("Reject: nothing changes");
-await page.getByRole("button", { name: "Reject" }).click();
-await pause(1400);
+await caption("Discard: nothing changes");
+await page.getByRole("button", { name: "Discard" }).click();
+await pause(1600);
 
-await caption("Undo from history (free, refuses if a later edit touched the same field)");
-await history(true);
-await pause(900);
-await page.getByRole("button", { name: /Undo: Hide "Burrata/ }).click();
+await caption("Recent changes, with one-tap undo (free)");
+await more(/Recent changes/);
+await pause(1000);
+await recent().getByRole("button", { name: /Undo: Hide "Burrata/ }).click();
 await pause(1800);
 await page.screenshot({ path: `${OUT}/editor-history.png` });
-await history(false);
+await page.getByRole("button", { name: "Close recent changes" }).click();
+await pause(600);
 
-if (DEMO) {
-  await caption("Publish → your private preview (the public demo never changes the live site)");
-  await page.locator(".edit-bar").getByRole("button", { name: "Publish" }).click();
-  await page.waitForSelector(".reply-ok >> text=Published", { timeout: 60000 });
-  await pause(1800);
-  await page.goto(`${ADMIN}/published`, { waitUntil: "networkidle" });
-  await page.locator('[data-edit-id="category:pizza"]').scrollIntoViewIfNeeded();
-  await caption("Published preview: margherita $16.50, burrata back after the undo");
-  await pause(2600);
-  await page.screenshot({ path: `${OUT}/demo-published-preview.png` });
+await caption("Publish: in the public demo it goes to your private preview, never the real site");
+await page.locator(".topbar").getByRole("button", { name: /^Publish/ }).click();
+await page.waitForSelector(".reply-ok >> text=Published", { timeout: 60000 });
+await pause(2000);
+await page.goto(`${ADMIN}/published`, { waitUntil: "networkidle" });
+await page.waitForSelector('[data-edit-id="category:pizza"]');
+await pause(500);
+await caption("Published preview: margherita now 16.50, burrata back after the undo");
+await page.evaluate(() => document.querySelector('[data-edit-id="category:pizza"]')?.scrollIntoView({ behavior: "smooth", block: "start" }));
+await pause(3000);
+await page.screenshot({ path: `${OUT}/demo-published-preview.png` });
 
-  // End state: this visitor has used up their credits. (Set through the internal admin API.)
+if (ADMIN_TOKEN) {
+  // This visitor runs out of AI credits (set through the internal admin API).
   const sid = (await context.cookies(ADMIN)).find((c) => c.name === "rsp_sid").value;
   const sandbox = `ember-and-elm~${createHash("sha256").update(`sbx:${sid}`).digest("base64url").slice(0, 22)}`;
   const r = await fetch(`${ADMIN}/api/admin/sites/${encodeURIComponent(sandbox)}/credits`, {
@@ -155,28 +160,33 @@ if (DEMO) {
   });
   if (!r.ok) throw new Error(`set credits: HTTP ${r.status}`);
   await page.goto(ADMIN, { waitUntil: "networkidle" });
-  await caption("Out of credits → the AI helper pauses, with no model call…");
+  await caption("Out of AI credits: a request the built-in phrases don't cover pauses, with no model call…");
   await type("put the desserts right after the starters please");
   await page.waitForSelector(".reply-warn");
-  await pause(2400);
+  await pause(2600);
   await page.screenshot({ path: `${OUT}/editor-credits-paused.png` });
   await caption("…and built-in phrases still work, free");
   await speak("Mark the black bean burger as vegan");
-  await page.waitForSelector("section.change");
+  await card();
   await pause(2600);
-} else {
-  await caption("Publish → API writes the menu JSON and re-runs the Astro build");
-  await page.locator(".edit-bar").getByRole("button", { name: "Publish" }).click();
-  await page.waitForSelector(".reply-ok >> text=Published", { timeout: 60000 });
-  await pause(2000);
-  await caption("Published static site (Astro) now shows the approved changes");
-  await page.goto(`${SITE}/menu#pizza`, { waitUntil: "networkidle" });
-  await caption("Published static site (Astro) now shows the approved changes");
-  await pause(3000);
+  await page.getByRole("button", { name: "Discard" }).click();
+  await pause(600);
 }
 
+await caption("The public site (static Astro on Cloudflare Pages)");
+await page.goto(SITE, { waitUntil: "networkidle" });
+await caption("The public site (static Astro on Cloudflare Pages)");
+await pause(2200);
+await page.evaluate(() => window.scrollTo({ top: 760, behavior: "smooth" }));
+await pause(2200);
+await page.goto(`${SITE}/menu`, { waitUntil: "networkidle" });
+await caption("The menu: a classic list, one photo per section, a cart island for ordering");
+await pause(1800);
+await page.evaluate(() => window.scrollTo({ top: 1250, behavior: "smooth" }));
+await pause(2600);
+
 await context.close();
-if (DEMO && ADMIN_TOKEN) {
+if (ADMIN_TOKEN) {
   // Internal margin view (separate context, not in the video).
   const ctx2 = await browser.newContext({ viewport: { width: 1200, height: 700 } });
   const p2 = await ctx2.newPage();

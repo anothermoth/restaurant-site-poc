@@ -14,7 +14,7 @@ Deploy steps: [docs/deploy.md](docs/deploy.md).
 
 ![Voice editor demo](docs/demo.gif)
 
-*Demo, 45 s ([MP4](docs/demo.mp4)), recorded in public-demo mode: a spoken price change → approve → click the burrata in the menu panel and type "86 it" → a request the parser doesn't know, handled by the AI fallback for 1 credit → a clarifying question for an ambiguous name → reject → undo → publish to the visitor's private preview → out of credits: the AI helper pauses, and built-in phrases still work. The speech in the recording is simulated: the script feeds fixed transcripts to the browser's speech-recognition API so the run is repeatable. Everything after the transcript is the real stack.*
+*Demo, 58 s ([MP4](docs/demo.mp4)), recorded against the live public demo (Nov 24, 2026) with built-in phrases only, so it made no AI calls: a spoken price change → approve → pick the burrata from the menu and type "86 it" → a clarifying question for an ambiguous name → discard → undo from Recent changes → publish to the visitor's private preview → out of credits: a request the phrases don't cover pauses without a model call, and built-in phrases still work → the public site and menu. The speech is simulated: the script feeds fixed transcripts to the browser's speech-recognition API so the run is repeatable. Everything after the transcript is the real stack.*
 
 > **Sample data.** "Ember & Elm Kitchen" is a fictional restaurant. The address, phone and menu are made up, and checkout is disabled. The food photos are real, free-licensed photography from Pexels, used for illustration (credits and license in [CREDITS.md](CREDITS.md); the photos are not covered by the MIT license). The sample menu has problems seeded on purpose so the checker has something to find. One of them is a second "caesar salad" (`caesar-2`): it stays in the data so the checker flags the duplicate and the editor can ask "which one?", but it ships hidden, so guests see one Caesar Salad.
 
@@ -65,7 +65,7 @@ scripts/          Lighthouse runner, screenshots, editor photo thumbnails, token
 
 ### 2. Site generator (`apps/site`)
 
-- **Design**: a full-bleed photo hero, Instrument Serif for display type with Inter for text (both self-hosted, latin subset, preloaded), a warm restrained palette, a classic menu list (serif dish names, dotted leaders to menu-style prices, dietary notes in plain words like "Vegetarian · Contains dairy & gluten") with one feature photo per section that alternates sides on desktop and sits above the list on phones, a sticky order button (a bottom bar on mobile) and a modifier sheet that slides up from the bottom on phones. Photos go through Astro's `<Picture>`: AVIF and WebP at several widths with `srcset`/`sizes`, explicit dimensions, lazy below the fold and `fetchpriority="high"` on the hero. Because photos are per section rather than per dish, dishes without a photo or description leave no holes. The pre-v3 card layout is tagged [`site-v2`](../../tree/site-v2); before and after screenshots (desktop and mobile, home, menu and the editor preview, which uses the same design) are in [`docs/redesign-v3/`](docs/redesign-v3/).
+- **Design**: a full-bleed photo hero, Instrument Serif for display type with Inter for text (both self-hosted, latin subset, preloaded), a warm restrained palette, a classic menu list (serif dish names, dotted leaders to menu-style prices, dietary notes in plain words like "Vegetarian · Contains dairy & gluten") with one feature photo per section that alternates sides on desktop and sits above the list on phones, a sticky order button (a bottom bar on mobile) and a modifier sheet that slides up from the bottom on phones. Photos go through Astro's `<Picture>`: AVIF and WebP at several widths with `srcset`/`sizes`, explicit dimensions, lazy below the fold and `fetchpriority="high"` on the hero. Because photos are per section rather than per dish, dishes without a photo or description leave no holes. The pre-v3 card layout is tagged [`site-v2`](../../tree/site-v2); before and after screenshots (desktop and mobile, home, menu and the editor preview, which uses the same design) are in [`docs/redesign-v3/`](docs/redesign-v3/). A follow-up pass on the home page's spacing (favorites as a short list on phones, a one-row footer that doesn't repeat the Visit section, tighter section padding) is tagged from [`site-v3`](../../tree/site-v3), with screenshots in [`docs/redesign-v4/`](docs/redesign-v4/).
 - **Home**: hero, featured items, hours, address. **Menu**: sections with sticky category nav, prices, dietary badges and allergen notes, "Add" buttons. **Admin report**: the checker's findings (marked `noindex`).
 - **One React island** (`Cart.tsx`, `client:idle`). The menu itself is plain HTML; the island attaches one delegated click listener for `[data-add-item]` buttons, opens a modifier picker for items with modifier groups, keeps the cart in `localStorage`, and prices it with the same `priceCart()`.
 - **SEO**: per-page title/description, canonical URL, Open Graph tags, `robots.txt`, and **JSON-LD**: `Restaurant` (address, hours, cuisine) on every page, with a full `Menu` → `MenuSection` → `MenuItem` → `Offer` tree (plus `suitableForDiet`) on `/menu`. JSON-LD is escaped so menu text can't break out of the script tag.
@@ -107,12 +107,12 @@ CLI options: `--json <file>` (full report), `--fix <file>` (write the auto-fixed
 
 ### 4. Voice site editor (`packages/command-engine`, `apps/api`, `apps/admin`)
 
-| Pending price change (needs approval) | AI fallback: 1 credit |
+| Pending price change (needs approval) | Published to the visitor's private preview |
 |---|---|
-| ![Pending change](docs/editor-pending-price.png) | ![AI fallback](docs/editor-llm-fallback.png) |
+| ![Pending change](docs/editor-pending-price.png) | ![Published preview](docs/demo-published-preview.png) |
 | **Ambiguous name: it asks instead of guessing** | **Out of credits: AI paused, parser still works** |
 | ![Clarify](docs/editor-clarify.png) | ![Credits paused](docs/editor-credits-paused.png) |
-| **Click-to-target: select an item, say "86 it"** | **History drawer with undo** |
+| **Pick an item from the menu, then say "86 it"** | **Recent changes with undo** |
 | ![Click to target](docs/editor-click-to-target.png) | ![History](docs/editor-history.png) |
 | **Internal margin view (`/dev`)** | |
 | ![Margin](docs/dev-margin.png) | |
@@ -216,7 +216,7 @@ Caveats: this is a lab test on localhost, with no CDN and no network latency, a 
 
 Reproduce: `npm run build && npm run lighthouse` (needs Chrome installed). These numbers were measured before the editor work added `data-edit-id` attributes to the pages.
 
-**Deployed (Cloudflare Pages), with real photos.** After the redesign, the same Lighthouse run against https://restaurant-site-poc.pages.dev over the real network (from the build machine, Nov 24, 2026, 9:00 PM CST; raw: [`docs/lighthouse-live.json`](docs/lighthouse-live.json), which also keeps the pre-redesign run) scored 100 in all four categories on `/` and `/menu`, in both modes. LCP is now the hero photo: 1.4 s on mobile and 0.4 s on desktop for `/`, 1.0 s and 0.3 s for `/menu`; CLS 0, TBT 0 ms. Total transfer is about 310–320 KiB for `/` and 290–300 KiB for `/menu`, almost all of it responsive AVIF images and two woff2 fonts (before the redesign, with SVG placeholders: LCP 0.9 s mobile, 7 KiB and 91 KiB). After the v3 visual pass (classic menu list, Nov 24, 2026, 9:59 PM CST) it is still 100 in all four categories on both pages and modes: mobile LCP 1.4 s for `/` and 1.5 s for `/menu`, desktop 0.4 s for both, CLS 0, TBT 0–50 ms. It's still one lab run from one location, not field data.
+**Deployed (Cloudflare Pages), with real photos.** After the redesign, the same Lighthouse run against https://restaurant-site-poc.pages.dev over the real network (from the build machine, Nov 24, 2026, 9:00 PM CST; raw: [`docs/lighthouse-live.json`](docs/lighthouse-live.json), which also keeps the pre-redesign run) scored 100 in all four categories on `/` and `/menu`, in both modes. LCP is now the hero photo: 1.4 s on mobile and 0.4 s on desktop for `/`, 1.0 s and 0.3 s for `/menu`; CLS 0, TBT 0 ms. Total transfer is about 310–320 KiB for `/` and 290–300 KiB for `/menu`, almost all of it responsive AVIF images and two woff2 fonts (before the redesign, with SVG placeholders: LCP 0.9 s mobile, 7 KiB and 91 KiB). After the v3 visual pass (classic menu list, Nov 24, 2026, 9:59 PM CST) it is still 100 in all four categories on both pages and modes: mobile LCP 1.4 s for `/` and 1.5 s for `/menu`, desktop 0.4 s for both, CLS 0, TBT 0–50 ms. After the v4 pass (home page rhythm, compact footer; Nov 24, 2026, 10:16 PM CST) all four categories are 100 on both pages in both modes: mobile LCP 1.4 s for `/` and 1.2 s for `/menu`, desktop 0.4 s, CLS 0, TBT 0 ms. It's still one lab run from one location, not field data.
 
 ## Run it
 
@@ -249,16 +249,16 @@ API_URL=http://localhost:4000 npm run dev:admin   # terminal 2: admin, proxying 
 npm run preview -w @restaurant-site-poc/site      # terminal 3: the static site on :4321
 ```
 
-Without an API key the editor runs on the parser alone and tells you when it didn't understand. `ADMIN_TOKEN=… npm run demo:record` re-records the demo video and screenshots against a running admin (needs Chrome). All settings are listed in [`.env.example`](.env.example).
+Without an API key the editor runs on the parser alone and tells you when it didn't understand. `ADMIN_TOKEN=… npm run demo:record -- [editorUrl] [siteUrl]` re-records the demo video and editor screenshots (defaults to the live demo; built-in phrases only, so no AI calls; needs Chrome), then `bash scripts/demo-media.sh` makes `demo.mp4` and `demo.gif`. `node scripts/readme-shots.mjs` retakes the site and live-editor screenshots. All settings are listed in [`.env.example`](.env.example).
 
 **Two-minute demo script**
 
-1. Open http://localhost:3000. The blue frame and bar mean you're editing a draft; the public site is unchanged.
-2. Hold **Hold to talk** and say "Change the price of the margarita to $16.50". The price is highlighted in the preview, and the card shows $15.00 → $16.50 with "Needs approval". Approve.
+1. Open http://localhost:3000. You're editing a draft; the public site is unchanged until you publish.
+2. Hold **Hold to talk** and say "Change the price of the margarita to $16.50". The price is highlighted in the preview, and the card shows $15.00 → $16.50 with "Prices and allergy info always wait for your OK". Approve.
 3. Type "86 the burrata". It's hidden in the preview (dimmed, flagged). Approve.
 4. Type "knock a dollar off the smash burger". The parser misses it, so the AI fallback answers in under a second; the card says "AI helper · 1 credit" and the top bar drops to 99 credits left. Approve.
-5. Type "hide the caesar salad". There are two Caesar salads, so it asks which one. Pick one, then Reject it.
-6. In the history, Undo the burrata change. Then press **Publish**, open the published site (or, in demo mode, your published preview) and see $16.50 on the menu.
+5. Type "hide the caesar salad". There are two Caesar salads, so it asks which one. Pick one, then Discard it.
+6. In ⋯ → Recent changes, undo the burrata change. Then press **Publish**, open the published site (or, in demo mode, your published preview) and see $16.50 on the menu.
 
 CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB service container for the API tests) → `check-menu` (deterministic only) → build the site → build the admin, and uploads the built site as an artifact. CI never calls an LLM (model calls are mocked in tests). CI doesn't deploy: the Cloudflare Pages deploy is a manual `npm run deploy:pages`.
 
