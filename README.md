@@ -4,7 +4,13 @@
 
 A fast, static restaurant website generated from menu JSON (Astro + one React island for the cart), a **menu-quality checker** (deterministic rules, safe auto-fixes, an optional LLM pass for item copy), and a **voice-driven, owner-approved site editor**: say or type "86 the burrata" or "raise the margherita by a dollar", review the diff, approve, publish. TypeScript end to end, in an npm-workspaces monorepo: Astro, React, Next.js App Router, Node/Express, MongoDB.
 
-**Live static site:** https://restaurant-site-poc.pages.dev (Cloudflare Pages). The editor is deploy-ready for Vercel + MongoDB Atlas but not hosted yet; see [docs/deploy.md](docs/deploy.md).
+**Live demo**
+- **Editor:** https://restaurant-site-poc-editor.vercel.app (Vercel + MongoDB Atlas M0, public-demo mode). You get your own sandbox copy of the menu with 25 AI credits; built-in phrases are free.
+- **Restaurant site:** https://restaurant-site-poc.pages.dev (Cloudflare Pages, static Astro).
+
+Deploy steps: [docs/deploy.md](docs/deploy.md).
+
+![Live editor on Vercel](docs/live-editor.png)
 
 ![Voice editor demo](docs/demo.gif)
 
@@ -266,7 +272,7 @@ CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB
 
 A server-side checkout endpoint; per-restaurant edge caching and revalidation with Workers; sign-in for the editor (outside demo mode it has no auth, so it's for local use only); photo-quality checks (resolution, blur); per-location menus and hours exceptions; running the checker across many menus in batch; auth and multi-user roles for the editor; adding new items or modifier groups by voice; per-page revalidation instead of a full rebuild on publish.
 
-The static site is deployed on Cloudflare Pages. The editor is ready for a free public deploy (Vercel Hobby + Atlas M0, with demo mode's sandboxes, rate limits and spend cap), but isn't hosted yet; [docs/deploy.md](docs/deploy.md) has the steps.
+Both are deployed on free tiers: the static site on Cloudflare Pages, and the editor on Vercel Hobby + Atlas M0 in demo mode (sandboxes, rate limits, $0.50/day spend cap).
 
 ## How this was built
 

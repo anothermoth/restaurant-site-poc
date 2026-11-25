@@ -5,8 +5,8 @@ Three pieces, all on free tiers:
 | Piece | Host | Status |
 |---|---|---|
 | Public restaurant site (Astro, static) | Cloudflare Pages, project `restaurant-site-poc` | **Live: https://restaurant-site-poc.pages.dev** |
-| Editor + API (Next.js admin with the API in route handlers) | Vercel (Hobby) | Not deployed yet: needs a Vercel login |
-| Database | MongoDB Atlas M0 (free) | Not created yet: needs an Atlas login |
+| Editor + API (Next.js admin with the API in route handlers) | Vercel (Hobby), project `restaurant-site-poc-editor` | **Live: https://restaurant-site-poc-editor.vercel.app** |
+| Database | MongoDB Atlas M0 (free), cluster `rsp-demo`, AWS us-east-1 | Live |
 
 The admin serves the API itself (`apps/admin/app/api/[...path]/route.ts`). That route uses the same framework-free router as the local Express server (`apps/api/src/router.ts`), so there is no separate API deployment. Express stays the local option (`npm run dev:api`), mainly because it can re-run the Astro build when you publish.
 
@@ -33,6 +33,7 @@ Install the Atlas CLI (`brew install mongodb-atlas-cli`, or the tarball from mon
 
 ```bash
 atlas auth login                                        # browser sign-in (the one manual step)
+# A brand-new Atlas account must finish the web onboarding (org + project) first, or the CLI gets HTTP 401.
 atlas clusters create rsp-demo --provider AWS --region US_EAST_1 --tier M0
 atlas dbusers create readWriteAnyDatabase --username rsp-app --password '<generate a long random one>'
 atlas accessLists create 0.0.0.0/0 --type cidrBlock --comment "Vercel functions have no fixed IPs"
