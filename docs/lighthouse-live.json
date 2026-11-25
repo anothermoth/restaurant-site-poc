@@ -1,28 +1,28 @@
 {
-  "measuredAt": "2026-11-25T03:00:03.894Z",
+  "measuredAt": "2026-11-25T03:59:21.798Z",
   "url": "https://restaurant-site-poc.pages.dev",
   "tool": "Lighthouse 13.6.0, Chrome/156.0.0.0",
-  "note": "Lighthouse against the deployed Cloudflare Pages site from the build machine, after the photo redesign and polish pass; mobile uses default simulated throttling (slow 4G, 4x CPU).",
+  "note": "Lighthouse against the deployed Cloudflare Pages site from the build machine, after the v3 visual pass (classic menu list, one feature photo per section); mobile uses default simulated throttling (slow 4G, 4x CPU).",
   "results": {
     "home-desktop": {
       "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "lcp": "0.4 s",
-      "fcp": "0.3 s",
-      "tbt": "0 ms",
+      "lcp": "0.4 s",
+      "fcp": "0.3 s",
+      "tbt": "0 ms",
       "cls": "0",
-      "transferKiB": 310
+      "transferKiB": 311
     },
     "home-mobile": {
       "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "lcp": "1.4 s",
-      "fcp": "0.9 s",
-      "tbt": "0 ms",
+      "lcp": "1.4 s",
+      "fcp": "0.9 s",
+      "tbt": "50 ms",
       "cls": "0",
       "transferKiB": 317
     },
@@ -31,22 +31,71 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "lcp": "0.3 s",
-      "fcp": "0.3 s",
-      "tbt": "0 ms",
+      "lcp": "0.4 s",
+      "fcp": "0.3 s",
+      "tbt": "0 ms",
       "cls": "0",
-      "transferKiB": 300
+      "transferKiB": 262
     },
     "menu-mobile": {
       "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "lcp": "1.0 s",
-      "fcp": "1.0 s",
-      "tbt": "0 ms",
+      "lcp": "1.5 s",
+      "fcp": "1.0 s",
+      "tbt": "0 ms",
       "cls": "0",
-      "transferKiB": 288
+      "transferKiB": 312
+    }
+  },
+  "previousRunPhotoRedesign": {
+    "measuredAt": "2026-11-25T03:00:03.894Z",
+    "results": {
+      "home-desktop": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "0.4\u00a0s",
+        "fcp": "0.3\u00a0s",
+        "tbt": "0\u00a0ms",
+        "cls": "0",
+        "transferKiB": 310
+      },
+      "home-mobile": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "1.4\u00a0s",
+        "fcp": "0.9\u00a0s",
+        "tbt": "0\u00a0ms",
+        "cls": "0",
+        "transferKiB": 317
+      },
+      "menu-desktop": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "0.3\u00a0s",
+        "fcp": "0.3\u00a0s",
+        "tbt": "0\u00a0ms",
+        "cls": "0",
+        "transferKiB": 300
+      },
+      "menu-mobile": {
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "lcp": "1.0\u00a0s",
+        "fcp": "1.0\u00a0s",
+        "tbt": "0\u00a0ms",
+        "cls": "0",
+        "transferKiB": 288
+      }
     }
   },
   "previousRunBeforeRedesign": {
@@ -57,9 +106,9 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "lcp": "0.2 s",
-        "fcp": "0.2 s",
-        "tbt": "0 ms",
+        "lcp": "0.2\u00a0s",
+        "fcp": "0.2\u00a0s",
+        "tbt": "0\u00a0ms",
         "cls": "0",
         "transferKiB": 7
       },
@@ -68,9 +117,9 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "lcp": "0.9 s",
-        "fcp": "0.9 s",
-        "tbt": "0 ms",
+        "lcp": "0.9\u00a0s",
+        "fcp": "0.9\u00a0s",
+        "tbt": "0\u00a0ms",
         "cls": "0",
         "transferKiB": 7
       },
@@ -79,9 +128,9 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "lcp": "0.2 s",
-        "fcp": "0.2 s",
-        "tbt": "0 ms",
+        "lcp": "0.2\u00a0s",
+        "fcp": "0.2\u00a0s",
+        "tbt": "0\u00a0ms",
         "cls": "0",
         "transferKiB": 91
       },
@@ -90,9 +139,9 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "lcp": "0.9 s",
-        "fcp": "0.9 s",
-        "tbt": "40 ms",
+        "lcp": "0.9\u00a0s",
+        "fcp": "0.9\u00a0s",
+        "tbt": "40\u00a0ms",
         "cls": "0",
         "transferKiB": 91
       }
