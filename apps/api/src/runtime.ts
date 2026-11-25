@@ -23,7 +23,8 @@ export async function createRuntime(seedMenu: Menu, opts: { env?: Record<string,
     // Demo publishes never write files or rebuild; they only update the sandbox.
     onPublish: config.demo ? undefined : (opts.onPublish ?? webhookPublisher(env.PUBLISH_HOOK_URL)),
   });
-  await service.seed(seedMenu.restaurant.slug, seedMenu);
+  // In demo mode the base site is only a template, so a new seed replaces it; a real site is never overwritten.
+  await service.seed(seedMenu.restaurant.slug, seedMenu, { upgrade: config.demo });
   return { client, service, config, llm, handle: createRouter(service, { seedMenu, config }) };
 }
 

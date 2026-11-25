@@ -6,7 +6,7 @@ import { parseMenu, type Menu } from "@restaurant-site-poc/menu-schema";
 import type { FetchLike } from "@restaurant-site-poc/command-engine";
 import { createApp } from "../src/app.ts";
 import { collections } from "../src/store.ts";
-import { EditService } from "../src/service.ts";
+import { EditService, seedVersion } from "../src/service.ts";
 import { configFromEnv, type RuntimeConfig } from "../src/config.ts";
 
 const MONGO_URL = process.env.MONGO_URL ?? "mongodb://127.0.0.1:27017";
@@ -156,6 +156,39 @@ describe("demo mode", () => {
     await db.collection("sites").deleteMany({ sandboxOf: slug }); // what the TTL monitor does
     const s = (await a.get(`/api/sites/${slug}`)).body;
     expect(s).toMatchObject({ draftVersion: 1, history: [], credits: { balance: 10 } });
+  });
+
+  it("replaces a sandbox copied from an older seed menu (stale photo paths), keeping its credits", async () => {
+    const { app } = await setup(demoEnv);
+    const a = request.agent(app);
+    const p = await a.post(`/api/sites/${slug}/commands`).send({ utterance: "hide the wings" });
+    await a.post(`/api/sites/${slug}/changes/${p.body.change.id}/approve`).expect(200);
+    // Edits survive while the seed hasn't changed.
+    expect((await a.get(`/api/sites/${slug}`)).body.draftVersion).toBe(2);
+
+    // Simulate a sandbox created before a deploy that changed the seed: old SVG placeholder paths, no/old seedVersion.
+    const sites = db.collection("sites");
+    const old = (m: Menu): Menu => ({ ...m, restaurant: { ...m.restaurant, heroPhoto: { ...m.restaurant.heroPhoto!, src: "/img/hero.svg" } } });
+    const box = (await sites.findOne({ sandboxOf: slug }))!;
+    await sites.updateOne({ _id: box._id }, { $set: { draft: old(box.draft), published: old(box.published), credits: 7 }, $unset: { seedVersion: "" } });
+
+    const s = (await a.get(`/api/sites/${slug}`)).body;
+    expect(s).toMatchObject({ draftVersion: 1, history: [], credits: { balance: 7 } });
+    expect(s.draft.restaurant.heroPhoto.src).toBe(seed.restaurant.heroPhoto!.src);
+    expect((await a.get(`/api/sites/${slug}/published.json`)).body.restaurant.heroPhoto.src).toBe(seed.restaurant.heroPhoto!.src);
+    expect(await sites.countDocuments({ sandboxOf: slug })).toBe(1);
+  });
+
+  it("reseeds the demo base site from a new seed, but never overwrites a real site", async () => {
+    const { service } = await setup(demoEnv);
+    const sites = db.collection("sites");
+    await sites.updateOne({ _id: slug as never }, { $set: { "draft.restaurant.heroPhoto.src": "/img/hero.svg", seedVersion: "old" } });
+    await service.seed(slug, seed);
+    expect((await sites.findOne({ _id: slug as never }))!.draft.restaurant.heroPhoto.src).toBe("/img/hero.svg");
+    await service.seed(slug, seed, { upgrade: true });
+    const base = (await sites.findOne({ _id: slug as never }))!;
+    expect(base.draft.restaurant.heroPhoto.src).toBe(seed.restaurant.heroPhoto!.src);
+    expect(base.seedVersion).toBe(seedVersion(seed));
   });
 
   it("publishes to a per-sandbox preview, never the public site", async () => {

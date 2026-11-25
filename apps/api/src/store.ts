@@ -19,6 +19,8 @@ export interface SiteDoc {
   expiresAt?: Date;
   /** Demo sandboxes only: the site this sandbox was copied from. */
   sandboxOf?: string;
+  /** Hash of the seed menu this site was created from (see seedVersion). A demo sandbox or demo base site with an older one is reseeded. */
+  seedVersion?: string;
 }
 
 export type ChangeSource = "parser" | "llm" | "llm-cache";

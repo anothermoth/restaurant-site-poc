@@ -4,7 +4,7 @@ import { formatPrice } from "@restaurant-site-poc/menu-schema/pricing";
 import { applySafeFixes, checkMenu } from "@restaurant-site-poc/menu-checker";
 import type { EditTarget } from "../lib/api.ts";
 import type { Menu } from "../lib/types.ts";
-import { previewSrc } from "./Preview.tsx";
+import { hideBroken, previewSrc } from "./Preview.tsx";
 
 /**
  * The menu as a searchable list. Clicking an item or section makes it the
@@ -65,7 +65,7 @@ export function MenuPanel({ menu, target, onSelect }: { menu: Menu; target: Edit
                   aria-pressed={isSel("item", i.id)}
                   onClick={() => toggle({ kind: "item", id: i.id })}
                 >
-                  {i.photo ? <img src={previewSrc(i.photo.src)} alt="" /> : <span className="mp-noimg" aria-hidden="true" />}
+                  {i.photo ? <img src={previewSrc(i.photo.src)} alt="" onError={hideBroken} /> : <span className="mp-noimg" aria-hidden="true" />}
                   <span className="mp-text">
                     <span className="mp-name">{i.name}</span>
                     {notes.get(i.id) && (

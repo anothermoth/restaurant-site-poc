@@ -7,6 +7,16 @@ export function previewSrc(src: string): string {
   return src.startsWith("/photos/") ? src.replace(/\.jpe?g$/i, ".webp") : src;
 }
 
+const BLANK = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+
+/** A photo that fails to load shows its placeholder tile (the img background) instead of the browser's broken-image icon. */
+export function hideBroken(e: { currentTarget: HTMLImageElement }) {
+  const img = e.currentTarget;
+  if (img.dataset.broken) return;
+  img.dataset.broken = "1";
+  img.src = BLANK;
+}
+
 /**
  * Live preview of the restaurant site, rendered from the draft plus any pending
  * change. Every editable element carries the same data-edit-id the Astro site
@@ -36,7 +46,7 @@ export function Preview({
   return (
     <div className={onPick ? "pv pv-pickable" : "pv"} style={{ ["--brand" as string]: r.brandColor }} aria-label="Site preview">
       <header className="pv-hero">
-        {r.heroPhoto && <img className="pv-hero-img" src={previewSrc(r.heroPhoto.src)} alt="" aria-hidden="true" />}
+        {r.heroPhoto && <img className="pv-hero-img" src={previewSrc(r.heroPhoto.src)} alt="" aria-hidden="true" onError={hideBroken} />}
         <div className="pv-hero-text">
           <h1>{r.name}</h1>
           {r.tagline && (
@@ -81,7 +91,7 @@ export function Preview({
                       )}
                     </div>
                   </div>
-                  {i.photo && <img className="pv-thumb" src={previewSrc(i.photo.src)} alt={i.photo.alt} loading="lazy" decoding="async" />}
+                  {i.photo && <img className="pv-thumb" src={previewSrc(i.photo.src)} alt={i.photo.alt} loading="lazy" decoding="async" onError={hideBroken} />}
                 </li>
               ))}
             </ul>

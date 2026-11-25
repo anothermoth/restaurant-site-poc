@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { ObjectId } from "mongodb";
 import { parseMenu, type Menu } from "@restaurant-site-poc/menu-schema";
 import {
@@ -53,6 +54,15 @@ export const isSandbox = (slug: string) => slug.includes(SANDBOX_SEP);
 export const accountOf = (slug: string) => slug.split(SANDBOX_SEP)[0]!;
 const DAY_MS = 86_400_000;
 
+/**
+ * Short content hash of a seed menu. Stored on every seeded site so data created from an
+ * older seed (for example one whose photo paths point at files that no longer exist) is
+ * recognised and replaced instead of being served forever.
+ */
+export function seedVersion(menu: Menu): string {
+  return createHash("sha256").update(JSON.stringify(menu)).digest("base64url").slice(0, 16);
+}
+
 export type ProposeResult =
   | { type: "change"; change: ChangeView; autoApproved: boolean }
   | { type: "meta"; action: MetaAction; message: string; change?: ChangeView }
@@ -102,15 +112,18 @@ export class EditService {
 
   /**
    * Creates the site if it doesn't exist. `reset` restores the seed menu but keeps the
-   * credit balance, so resetting can't be used to refill credits.
+   * credit balance, so resetting can't be used to refill credits. `upgrade` (demo mode
+   * only) also resets a site that was seeded from a different version of the seed menu;
+   * a real owner's site is never overwritten this way.
    */
-  async seed(slug: string, menu: Menu, { reset = false, expiresAt, sandboxOf }: { reset?: boolean; expiresAt?: Date; sandboxOf?: string } = {}) {
+  async seed(slug: string, menu: Menu, { reset = false, upgrade = false, expiresAt, sandboxOf }: { reset?: boolean; upgrade?: boolean; expiresAt?: Date; sandboxOf?: string } = {}) {
+    const version = seedVersion(menu);
     const exists = await this.c.sites.findOne({ _id: slug });
-    if (exists && !reset) {
+    if (exists && !reset && !(upgrade && exists.seedVersion !== version)) {
       if (typeof exists.credits !== "number") await this.c.sites.updateOne({ _id: slug }, { $set: { credits: this.limits.defaultCredits } });
       return;
     }
-    if (reset) await Promise.all([this.c.changes.deleteMany({ slug }), this.c.events.deleteMany({ slug })]);
+    if (exists) await Promise.all([this.c.changes.deleteMany({ slug }), this.c.events.deleteMany({ slug })]);
     const now = this.now();
     const credits = typeof exists?.credits === "number" ? exists.credits : this.limits.defaultCredits;
     const doc: Omit<SiteDoc, "_id"> = {
@@ -122,37 +135,49 @@ export class EditService {
       settings: { autoApproveLowRisk: false },
       credits,
       updatedAt: now,
+      seedVersion: version,
       ...(expiresAt ? { expiresAt } : {}),
       ...(sandboxOf ? { sandboxOf } : {}),
     };
     await this.c.sites.replaceOne({ _id: slug }, doc, { upsert: true });
   }
 
-  /** Creates the demo sandbox on first use and pushes its expiry back on every request. */
+  /**
+   * Creates the demo sandbox on first use and pushes its expiry back on every request.
+   * A sandbox copied from an older seed menu is replaced with the current one (credits
+   * are kept, so this can't be used to refill them); otherwise a visitor who kept a
+   * sandbox alive across a deploy would keep seeing the old data, e.g. deleted photos.
+   */
   async touchSandbox(slug: string, seedMenu: Menu, idleMs: number) {
     const expiresAt = new Date(this.now().getTime() + idleMs);
-    const r = await this.c.sites.updateOne({ _id: slug }, { $set: { expiresAt } });
-    if (r.matchedCount === 0) {
-      try {
-        await this.c.changes.deleteMany({ slug });
-        await this.c.events.deleteMany({ slug });
-        await this.c.sites.insertOne({
-          _id: slug,
-          draft: seedMenu,
-          published: seedMenu,
-          draftVersion: 1,
-          publishedVersion: 1,
-          publishedAt: null,
-          settings: { autoApproveLowRisk: false },
-          credits: this.limits.defaultCredits,
-          updatedAt: this.now(),
-          expiresAt,
-          sandboxOf: accountOf(slug),
-        });
-      } catch (e) {
-        // Two first requests raced; the other one created it.
-        if (!(e && typeof e === "object" && "code" in e && e.code === 11000)) throw e;
-      }
+    const version = seedVersion(seedMenu);
+    const r = await this.c.sites.updateOne({ _id: slug, seedVersion: version }, { $set: { expiresAt } });
+    if (r.matchedCount > 0) return;
+    const stale = await this.c.sites.findOne({ _id: slug }, { projection: { credits: 1 } });
+    await this.c.changes.deleteMany({ slug });
+    await this.c.events.deleteMany({ slug });
+    const doc = {
+      draft: seedMenu,
+      published: seedMenu,
+      draftVersion: 1,
+      publishedVersion: 1,
+      publishedAt: null,
+      settings: { autoApproveLowRisk: false },
+      credits: typeof stale?.credits === "number" ? stale.credits : this.limits.defaultCredits,
+      updatedAt: this.now(),
+      expiresAt,
+      sandboxOf: accountOf(slug),
+      seedVersion: version,
+    };
+    if (stale) {
+      await this.c.sites.replaceOne({ _id: slug }, doc);
+      return;
+    }
+    try {
+      await this.c.sites.insertOne({ _id: slug, ...doc });
+    } catch (e) {
+      // Two first requests raced; the other one created it.
+      if (!(e && typeof e === "object" && "code" in e && e.code === 11000)) throw e;
     }
   }
 
