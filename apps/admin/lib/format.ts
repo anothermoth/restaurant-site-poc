@@ -37,3 +37,26 @@ export function costLine(source: string, credits: number): string {
 export function creditsLabel(balance: number): string {
   return `${balance} credit${balance === 1 ? "" : "s"} left`;
 }
+
+const FIELD: Record<string, string> = { price: "Price", name: "Name", description: "Description", available: "On the menu", dietaryTags: "Tags", hidden: "Section" };
+
+/**
+ * A change in owner words: what is changing, and its value before and after.
+ * Ordering changes have no meaningful before/after values, so they show only the sentence.
+ */
+export function plainRows(change: { ops: Op[]; summary: string[] }, menu: { currency?: string; categories: Array<{ id: string; name: string; items: Array<{ id: string; name: string }> }> }) {
+  const items = new Map(menu.categories.flatMap((c) => c.items.map((i) => [i.id, i.name] as const)));
+  const cats = new Map(menu.categories.map((c) => [c.id, c.name] as const));
+  return change.ops
+    .filter((op) => !/\/(itemOrder|categoryOrder)$/.test(op.path) && op.path !== "/categoryOrder")
+    .map((op) => {
+      const [, kind, id, field] = op.path.split("/");
+      let what: string;
+      if (kind === "items") what = `${items.get(id!) ?? id} · ${FIELD[field!] ?? field}`;
+      else if (kind === "categories") what = `${cats.get(id!) ?? id} section`;
+      else if (op.path === "/restaurant/hours") what = "Opening hours";
+      else what = (id ?? "").replace(/^./, (c) => c.toUpperCase());
+      const value = (v: unknown) => (op.path.endsWith("/available") ? (v ? "Showing" : "Hidden") : formatOpValue(op, v, menu.currency));
+      return { key: op.path, what, before: value(op.before), after: value(op.after) };
+    });
+}

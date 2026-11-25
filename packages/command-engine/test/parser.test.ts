@@ -73,6 +73,14 @@ describe("deterministic parser", () => {
     expect(cmds("hide the caesar-2")).toEqual([{ cmd: "hide_item", itemId: "caesar-2" }]);
   });
 
+  it("understands how owners say an item is sold out", () => {
+    for (const u of ["We're out of the burrata", "we are out of burrata tonight", "Ran out of wings", "No more tiramisu today", "The wings are sold out tonight", "Hide the burrata for today"]) {
+      const r = parse(u, menu);
+      expect(r.kind, u).toBe("commands");
+      if (r.kind === "commands") expect(r.commands[0]!.cmd, u).toBe("hide_item");
+    }
+  });
+
   it("returns none for requests outside the grammar (LLM fallback territory)", () => {
     for (const u of ["make the burgers a bit cheaper", "add a note that we have a patio", "hide the lobster"]) {
       expect(parse(u, menu).kind, u).toBe("none");
@@ -125,6 +133,15 @@ describe("click-to-target (selected item or section as context)", () => {
     expect(one("rename to Classic Margherita")).toEqual({ cmd: "rename_item", itemId: "margherita", name: "Classic Margherita" });
     expect(one("mark as vegan")).toEqual({ cmd: "add_dietary_tag", itemId: "margherita", tag: "vegan" });
     expect(one("move to the top")).toEqual({ cmd: "reorder", kind: "item", id: "margherita", to: "top" });
+  });
+
+  it("handles owner phrasing with a selection: rename this, out of this, hide it tonight", () => {
+    expect(one("rename this to Classic Margherita")).toEqual({ cmd: "rename_item", itemId: "margherita", name: "Classic Margherita" });
+    expect(one("call it Classic Margherita")).toEqual({ cmd: "rename_item", itemId: "margherita", name: "Classic Margherita" });
+    expect(one("we're out of this")).toEqual({ cmd: "hide_item", itemId: "margherita" });
+    expect(one("hide this for today")).toEqual({ cmd: "hide_item", itemId: "margherita" });
+    // A named item still wins: this is not "rename the selection to 'the wings to X'".
+    expect(one("rename the wings to Hot Wings")).toEqual({ cmd: "rename_item", itemId: "wings", name: "Hot Wings" });
   });
 
   it("still lets a named item win over the selection", () => {

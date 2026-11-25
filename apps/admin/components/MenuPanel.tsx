@@ -37,11 +37,11 @@ export function MenuPanel({ menu, target, onSelect }: { menu: Menu; target: Edit
         </svg>
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the menu" aria-label="Search the menu" />
       </div>
-      <p className="mp-hint">Select an item, then say “make this $14” or “86 it”.</p>
+      <p className="mp-hint">Tap an item, then say what to change, like “make it $14” or “we’re out of this”.</p>
       {flagged > 0 && (
         <p className="mp-attn">
           <span className="mp-dot sev-warning" aria-hidden="true" />
-          {flagged} item{flagged === 1 ? "" : "s"} flagged by the menu checker
+          {flagged} item{flagged === 1 ? "" : "s"} could use a quick look
         </p>
       )}
       {sections.length === 0 && <p className="mp-empty">No items match “{q}”.</p>}

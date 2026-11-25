@@ -7,7 +7,9 @@ import { Preview } from "../components/Preview.tsx";
 import { ChangeCard } from "../components/ChangeCard.tsx";
 import { History } from "../components/History.tsx";
 import { MicButton } from "../components/MicButton.tsx";
-import { Editor } from "../components/Editor.tsx";
+import { Editor, SUGGESTIONS } from "../components/Editor.tsx";
+import { parse } from "@restaurant-site-poc/command-engine";
+import { plainRows } from "../lib/format.ts";
 import { itemNotes } from "../components/MenuPanel.tsx";
 import type { Change, SiteState } from "../lib/types.ts";
 
@@ -50,21 +52,28 @@ describe("<ChangeCard />", () => {
   it("shows the before/after diff, risk badge, checker effect and cost line", () => {
     const onApprove = vi.fn();
     const onReject = vi.fn();
-    render(<ChangeCard change={change} onApprove={onApprove} onReject={onReject} />);
-    expect(screen.getByText("$15.00").className).toBe("before");
-    expect(screen.getByText("$16.50").className).toBe("after");
-    expect(screen.getByText(/Needs approval/)).toBeTruthy();
-    expect(screen.getByText(/Fixes: Truffle Pie/)).toBeTruthy();
-    expect(screen.getByText(/Matched instantly · free/)).toBeTruthy();
+    const { container } = render(<ChangeCard change={change} menu={menu} onApprove={onApprove} onReject={onReject} />);
+    // Plain words up front: what changes, old value crossed out, new value.
+    expect(container.querySelector(".review-row dt")!.textContent).toBe("Margherita · Price");
+    expect(container.querySelector(".review-row .before")!.textContent).toBe("$15.00");
+    expect(container.querySelector(".review-row .after")!.textContent).toBe("$16.50");
+    expect(screen.getByText(/always wait for your OK/)).toBeTruthy();
+    expect(screen.getByText(/fixes a problem on your menu/)).toBeTruthy();
+    // The technical diff, checker messages and cost sit behind "Details".
+    const details = container.querySelector("details")!;
+    expect(within(details as HTMLElement).getByText(/Fixes: Truffle Pie/)).toBeTruthy();
+    expect(details.textContent).toMatch(/Needs approval/);
+    expect(details.textContent).toMatch(/Matched instantly · free/);
+    expect(details.querySelector("code")!.textContent).toBe("margherita · price");
     fireEvent.click(screen.getByRole("button", { name: "Approve" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(onApprove).toHaveBeenCalledOnce();
     expect(onReject).toHaveBeenCalledOnce();
   });
 
   it("shows the cost of AI-proposed changes in credits, never dollars", () => {
     const { container } = render(<ChangeCard change={{ ...change, source: "llm", credits: 1 }} onApprove={() => {}} onReject={() => {}} />);
-    expect(screen.getByText("AI helper · 1 credit")).toBeTruthy();
+    expect(container.querySelector("details")!.textContent).toMatch(/AI helper · 1 credit/);
     expect(container.textContent).not.toMatch(/\$0\.|tokens/);
   });
 });
@@ -150,18 +159,20 @@ describe("<Editor /> credits", () => {
   it("shows 'N credits left' in the top bar instead of a dollar cost", async () => {
     serve(state(98, false));
     render(<Editor slug="ember-and-elm" siteUrl="http://localhost:4321" />);
+    fireEvent.click(await screen.findByRole("button", { name: "More" }));
     expect((await screen.findByTestId("credits")).textContent).toBe("98 credits left");
     expect(screen.getByRole("region", { name: "Edit mode" }).textContent).not.toMatch(/\$/);
-    expect(screen.getByRole("link", { name: /Published site/ }).getAttribute("href")).toBe("http://localhost:4321");
+    expect(screen.getByRole("menuitem", { name: /Published site/ }).getAttribute("href")).toBe("http://localhost:4321");
     vi.unstubAllGlobals();
   });
 
   it("says the AI helper is paused at 0 credits, and in demo mode links the private preview", async () => {
     serve(state(0, true));
     render(<Editor slug="ember-and-elm" siteUrl="http://localhost:4321" />);
+    fireEvent.click(await screen.findByRole("button", { name: "More" }));
     expect((await screen.findByTestId("credits")).textContent).toBe("0 credits left · AI helper paused");
     expect(screen.getByRole("note").textContent).toMatch(/resets after 60 minutes/);
-    expect(screen.getByRole("link", { name: /Your published preview/ }).getAttribute("href")).toBe("/published");
+    expect(screen.getByRole("menuitem", { name: /Your published preview/ }).getAttribute("href")).toBe("/published");
     vi.unstubAllGlobals();
   });
 });
@@ -200,16 +211,22 @@ describe("click-to-target", () => {
   it("clicking an item in the menu panel makes it the target and sends it with the command", async () => {
     const calls = serve();
     render(<Editor slug="ember-and-elm" />);
+    // The menu is on demand, not always open.
+    expect(screen.queryByRole("complementary", { name: "Menu items" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: /pick something from your menu/i }));
     const panel = await screen.findByRole("complementary", { name: "Menu items" });
-    const item = within(panel).getByRole("button", { name: /Margherita/ });
-    fireEvent.click(item);
-    expect(item.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(within(panel).getByRole("button", { name: /Margherita/ }));
+    // Picking closes the sheet; reopening shows the item selected.
+    expect(screen.queryByRole("complementary", { name: "Menu items" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Browse your menu" }));
+    expect(within(screen.getByRole("complementary", { name: "Menu items" })).getByRole("button", { name: /Margherita/ }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "Clear selection Margherita" })).toBeTruthy();
     expect(document.querySelector('.pv [data-edit-id="item:margherita"]')!.classList.contains("sel")).toBe(true);
 
-    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "make this $14" } });
+    fireEvent.change(screen.getByLabelText("What would you like to change?"), { target: { value: "make this $14" } });
     await act(async () => {
-      fireEvent.submit(screen.getByLabelText("Command").closest("form")!);
+      fireEvent.submit(screen.getByLabelText("What would you like to change?").closest("form")!);
     });
     const post = calls.find((c) => c.url.endsWith("/commands"))!;
     expect(post.body).toEqual({ utterance: "make this $14", input: "text", target: { kind: "item", id: "margherita" } });
@@ -218,13 +235,14 @@ describe("click-to-target", () => {
   it("clears the target, and sends no target when nothing is selected", async () => {
     const calls = serve();
     render(<Editor slug="ember-and-elm" />);
+    fireEvent.click(await screen.findByRole("button", { name: /pick something from your menu/i }));
     const panel = await screen.findByRole("complementary", { name: "Menu items" });
     fireEvent.click(within(panel).getByRole("button", { name: /Burrata/ }));
     fireEvent.click(screen.getByRole("button", { name: /Clear selection/ }));
     expect(screen.queryByRole("button", { name: /Clear selection/ })).toBeNull();
-    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "86 the burrata" } });
+    fireEvent.change(screen.getByLabelText("What would you like to change?"), { target: { value: "86 the burrata" } });
     await act(async () => {
-      fireEvent.submit(screen.getByLabelText("Command").closest("form")!);
+      fireEvent.submit(screen.getByLabelText("What would you like to change?").closest("form")!);
     });
     expect(calls.find((c) => c.url.endsWith("/commands"))!.body).toEqual({ utterance: "86 the burrata", input: "text" });
   });
@@ -232,7 +250,7 @@ describe("click-to-target", () => {
   it("clicking an item or section in the preview selects it too", async () => {
     serve();
     const { container } = render(<Editor slug="ember-and-elm" />);
-    await screen.findByTestId("credits");
+    await screen.findByRole("region", { name: "Preview" });
     fireEvent.click(container.querySelector('.pv [data-edit-id="item:tiramisu"]')!);
     expect(screen.getByRole("button", { name: "Clear selection Tiramisu" })).toBeTruthy();
     fireEvent.click(container.querySelector('.pv [data-edit-id="category:salads"] h2')!);
@@ -242,6 +260,7 @@ describe("click-to-target", () => {
   it("filters the menu panel by search", async () => {
     serve();
     render(<Editor slug="ember-and-elm" />);
+    fireEvent.click(await screen.findByRole("button", { name: /pick something from your menu/i }));
     const panel = await screen.findByRole("complementary", { name: "Menu items" });
     fireEvent.change(within(panel).getByLabelText("Search the menu"), { target: { value: "burger" } });
     const names = within(panel).getAllByRole("button", { pressed: false }).map((b) => b.textContent);
@@ -300,5 +319,72 @@ describe("<Editor /> publish button", () => {
     expect((btn as HTMLButtonElement).disabled).toBe(false);
     expect(btn.textContent).toBe("Publish2");
     expect(btn.getAttribute("title")).toBe("Publish 2 approved changes");
+  });
+});
+
+describe("owner-first editor", () => {
+  const base = (over: Partial<SiteState> = {}): SiteState => ({
+    slug: "ember-and-elm",
+    draftVersion: 4,
+    publishedVersion: 2,
+    publishedAt: null,
+    unpublished: false,
+    settings: { autoApproveLowRisk: false },
+    draft: menu,
+    preview: menu,
+    pending: null,
+    history: [],
+    credits: { balance: 25, perAiCall: 1 },
+    activity: { parser: 0, ai: 0, aiCache: 0 },
+    demo: true,
+    sandboxIdleMinutes: 60,
+    ...over,
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const serve = (st: SiteState) => vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => st })));
+
+  it("starter suggestions are plain sentences the built-in parser handles (never an AI credit)", () => {
+    expect(SUGGESTIONS.length).toBeLessThanOrEqual(3);
+    for (const s of SUGGESTIONS) expect(parse(s, menu).kind, s).toBe("commands");
+  });
+
+  it("idle screen: one question, the ask box, three ideas; no jargon, versions or credits on show", async () => {
+    serve(base());
+    const { container } = render(<Editor slug="ember-and-elm" />);
+    expect(await screen.findByRole("heading", { name: "What would you like to change?" })).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Make a change" }).querySelector(".ideas") as HTMLElement).getAllByRole("button")).toHaveLength(4); // 3 ideas + pick from menu
+    const visible = (container.querySelector(".topbar")!.textContent ?? "") + (container.querySelector(".assistant")!.textContent ?? "");
+    expect(visible).not.toMatch(/\bv\d|draft|command|schema|credit|checker|parser|LLM/i);
+    expect(screen.queryByTestId("credits")).toBeNull(); // tucked behind ⋯
+    expect(screen.queryByRole("complementary")).toBeNull(); // menu and history are on demand
+  });
+
+  it("shows the pending change instead of the ideas, and the preview says it's highlighted", async () => {
+    serve(base({ pending: change, unpublished: false }));
+    render(<Editor slug="ember-and-elm" />);
+    expect(await screen.findByRole("region", { name: "Pending change" })).toBeTruthy();
+    expect(screen.queryByLabelText("Suggestions")).toBeNull();
+    expect(screen.getByText("Preview with your change highlighted")).toBeTruthy();
+  });
+
+  it("history and settings open from ⋯ in owner words, with undo", async () => {
+    serve(base({ unpublished: true, history: [{ ...change, id: "a", status: "approved" }] }));
+    render(<Editor slug="ember-and-elm" />);
+    fireEvent.click(await screen.findByRole("button", { name: "More" }));
+    expect(screen.getByText("1 change saved, not on your website yet")).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Recent changes/ }));
+    const sheet = screen.getByRole("complementary", { name: "Recent changes" });
+    expect(within(sheet).getByText("Saved")).toBeTruthy();
+    expect(within(sheet).getByText("Not published yet")).toBeTruthy();
+    expect(within(sheet).getByRole("button", { name: /Undo/ })).toBeTruthy();
+    expect(within(sheet).getByLabelText(/Read replies aloud/)).toBeTruthy();
+    expect(within(sheet).getByRole("button", { name: "Start the demo over" })).toBeTruthy();
+  });
+
+  it("plainRows names items and fields the way an owner would", () => {
+    expect(plainRows(change, menu)).toEqual([{ key: "/items/margherita/price", what: "Margherita · Price", before: "$15.00", after: "$16.50" }]);
+    const hide = { ops: [{ path: "/items/burrata/available", before: true, after: false }], summary: [] };
+    expect(plainRows(hide, menu)[0]).toMatchObject({ what: "Burrata & Heirloom Tomatoes · On the menu", before: "Showing", after: "Hidden" });
+    expect(plainRows({ ops: [{ path: "/categories/salads/itemOrder", before: [], after: [] }], summary: [] }, menu)).toEqual([]);
   });
 });

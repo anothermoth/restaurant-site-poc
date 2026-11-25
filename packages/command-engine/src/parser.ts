@@ -30,7 +30,9 @@ const BARE: Array<[RegExp, string]> = [
   [/^(?:to\s+)?(\$\s*\d.*|\d{1,4}(?:\.\d{1,2})?(?:\s*(?:dollars|bucks))?)$/i, "make it $1"],
   [/^(raise|increase|bump|lower|reduce|drop|cut)\s+(?:it\s+|the\s+price\s+)?by\s+(.+)$/i, "$1 it by $2"],
   [/^(?:it'?s\s+|is\s+)?(sold out|out of stock|unavailable|back|available(?:\s+again)?)$/i, "it is $1"],
-  [/^(?:rename(?:\s+it)?|call\s+it)\s+(?:to\s+|as\s+)?(.+)$/i, "rename it to $1"],
+  // "rename this to X" / "rename to X" / "call it X" (not "rename the wings to X", which names its own item).
+  [/^(?:rename(?:\s+(?:it|this|that))?|call\s+(?:it|this))\s+(?:to|as)\s+(.+)$/i, "rename it to $1"],
+  [/^call\s+(?:it|this)\s+(.+)$/i, "rename it to $1"],
   [/^(?:describe(?:\s+it)?\s+as|(?:set|change|update)\s+(?:the\s+)?description\s+to)\s+(.+)$/i, "describe it as $1"],
   [/^(mark|tag|label|flag)\s+(?:it\s+|this\s+)?as\s+(.+)$/i, "$1 it as $2"],
   [/^(?:move|put)\s+(?:it\s+|this\s+)?(?:to\s+)?(?:the\s+)?(top|bottom|first|last|start|end)$/i, "move it to the $1"],
@@ -55,6 +57,9 @@ const META: Array<[RegExp, MetaAction]> = [
   [/^(?:approve|approve (?:it|that)|yes|yep|looks good|confirm|do it|ship it)$/i, "approve"],
   [/^(?:reject|reject (?:it|that)|no|nope|cancel|discard(?: that)?|never ?mind)$/i, "reject"],
 ];
+
+/** Optional "for now / today / tonight" tail on hide phrases. */
+const FOR_NOW = String.raw`(?:\s+(?:for\s+)?(?:now|today|tonight|the (?:day|night)))?`;
 
 const PRICE = String.raw`\$?\s*(\d{1,4}(?:\.\d{1,2})?)\s*(?:dollars|bucks|usd)?(?:\s*(?:and\s*)?(\d{1,2})\s*cents)?`;
 
@@ -299,15 +304,24 @@ const RULES: Rule[] = [
   },
   // hide / show (after tags so "x is not vegan" isn't read as hide)
   {
-    re: new RegExp(`^(?:hide|remove|take off|take down|86|eighty[- ]six|pull)\\s+${ITEM}(?:\\s+(?:from|off)\\s+(?:the\\s+)?(?:menu|site|website))?(?:\\s+for now|\\s+today)?$`, "i"),
+    re: new RegExp(`^(?:hide|remove|take off|take down|86|eighty[- ]six|pull)\\s+${ITEM}(?:\\s+(?:from|off)\\s+(?:the\\s+)?(?:menu|site|website))?${FOR_NOW}$`, "i"),
     build(m, resolve) {
       const t = resolve(m[1]!.replace(/\s+(?:section|category)$/i, ""), /section|category/i.test(m[1]!) ? "category" : undefined);
       if (!t || "clarify" in t) return t;
       return t.kind === "item" ? { cmd: "hide_item", itemId: t.id } : { cmd: "toggle_category", categoryId: t.id, visible: false };
     },
   },
+  // Owner phrasing: "we're out of the burrata tonight", "ran out of wings", "no more tiramisu today".
   {
-    re: new RegExp(`^${ITEM}\\s+(?:is|are)\\s+(?:sold out|out of stock|unavailable|gone)(?:\\s+today|\\s+for now)?$`, "i"),
+    re: new RegExp(`^(?:(?:we(?:'re| are)|i'm|i am)\\s+)?(?:(?:all|completely|totally)\\s+)?(?:out of|sold out of|ran out of|run out of|have run out of|have no|got no|no more)\\s+${ITEM}${FOR_NOW}$`, "i"),
+    build(m, resolve) {
+      const t = resolve(m[1]!, "item");
+      if (!t || "clarify" in t) return t;
+      return { cmd: "hide_item", itemId: t.id };
+    },
+  },
+  {
+    re: new RegExp(`^${ITEM}\\s+(?:is|are|'s)\\s+(?:sold out|out of stock|unavailable|gone|86'?d)${FOR_NOW}$`, "i"),
     build(m, resolve) {
       const t = resolve(m[1]!, "item");
       if (!t || "clarify" in t) return t;
