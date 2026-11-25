@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { formatPrice } from "@restaurant-site-poc/menu-schema/pricing";
+import { applySafeFixes, checkMenu } from "@restaurant-site-poc/menu-checker";
 import type { EditTarget } from "../lib/api.ts";
 import type { Menu } from "../lib/types.ts";
 import { previewSrc } from "./Preview.tsx";
@@ -22,6 +23,8 @@ export function MenuPanel({ menu, target, onSelect }: { menu: Menu; target: Edit
         .filter((c) => c.items.length > 0 || c.name.toLowerCase().includes(query)),
     [menu, query],
   );
+  const notes = useMemo(() => itemNotes(menu), [menu]);
+  const flagged = notes.size;
   const isSel = (kind: EditTarget["kind"], id: string) => target?.kind === kind && target.id === id;
   const toggle = (t: EditTarget) => onSelect(isSel(t.kind, t.id) ? null : t);
 
@@ -35,6 +38,12 @@ export function MenuPanel({ menu, target, onSelect }: { menu: Menu; target: Edit
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the menu" aria-label="Search the menu" />
       </div>
       <p className="mp-hint">Select an item, then say “make this $14” or “86 it”.</p>
+      {flagged > 0 && (
+        <p className="mp-attn">
+          <span className="mp-dot sev-warning" aria-hidden="true" />
+          {flagged} item{flagged === 1 ? "" : "s"} flagged by the menu checker
+        </p>
+      )}
       {sections.length === 0 && <p className="mp-empty">No items match “{q}”.</p>}
       {sections.map((c) => (
         <section key={c.id} className="mp-section">
@@ -57,7 +66,15 @@ export function MenuPanel({ menu, target, onSelect }: { menu: Menu; target: Edit
                   onClick={() => toggle({ kind: "item", id: i.id })}
                 >
                   {i.photo ? <img src={previewSrc(i.photo.src)} alt="" /> : <span className="mp-noimg" aria-hidden="true" />}
-                  <span className="mp-name">{i.name}</span>
+                  <span className="mp-text">
+                    <span className="mp-name">{i.name}</span>
+                    {notes.get(i.id) && (
+                      <span className={`mp-note sev-${notes.get(i.id)!.severity}`} title={notes.get(i.id)!.detail}>
+                        <span className="mp-dot" aria-hidden="true" />
+                        {notes.get(i.id)!.label}
+                      </span>
+                    )}
+                  </span>
                   <span className="mp-price">{i.available ? formatPrice(i.price, menu.currency) : "86’d"}</span>
                 </button>
               </li>
@@ -74,4 +91,40 @@ export function targetName(menu: Menu, t: EditTarget | null): string | null {
   if (!t) return null;
   if (t.kind === "category") return menu.categories.find((c) => c.id === t.id)?.name ?? null;
   return menu.categories.flatMap((c) => c.items).find((i) => i.id === t.id)?.name ?? null;
+}
+
+const SHORT: Record<string, string> = {
+  "price-outlier": "Price looks off",
+  "duplicate-item": "Possible duplicate",
+  "missing-description": "No description",
+  "missing-photo": "No photo",
+  "missing-dietary-tags": "No allergen tags",
+};
+const RANK = { error: 3, warning: 2, info: 1 } as const;
+
+export interface ItemNote {
+  severity: "error" | "warning" | "info";
+  label: string;
+  detail: string;
+}
+
+/**
+ * One short note per item from the menu checker, so draft data like "GARLIC KNOTS"
+ * reads as a known, flagged issue rather than a UI bug. Safe renames show the
+ * name the item will publish as (the build applies the same auto-fix).
+ */
+export function itemNotes(menu: Menu): Map<string, ItemNote> {
+  const findings = checkMenu(menu).findings.filter((f) => f.target.itemId);
+  const fixed = applySafeFixes(menu, findings).menu;
+  const fixedName = new Map(fixed.categories.flatMap((c) => c.items).map((i) => [i.id, i.name]));
+  const byItem = new Map<string, typeof findings>();
+  for (const f of findings) byItem.set(f.target.itemId!, [...(byItem.get(f.target.itemId!) ?? []), f]);
+  const out = new Map<string, ItemNote>();
+  for (const [id, fs] of byItem) {
+    const top = [...fs].sort((a, b) => RANK[b.severity] - RANK[a.severity])[0]!;
+    const rename = fs.find((f) => f.ruleId === "inconsistent-naming");
+    const label = top.ruleId === "inconsistent-naming" && rename ? `Publishes as “${fixedName.get(id)}”` : (SHORT[top.ruleId] ?? "Needs review");
+    out.set(id, { severity: top.severity, label: fs.length > 1 ? `${label} +${fs.length - 1}` : label, detail: fs.map((f) => f.message).join("\n") });
+  }
+  return out;
 }

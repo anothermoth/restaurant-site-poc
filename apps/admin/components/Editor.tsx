@@ -32,6 +32,7 @@ export function Editor({ slug, siteUrl }: { slug: string; siteUrl?: string }) {
   const [target, setTarget] = useState<EditTarget | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const canvas = useRef<HTMLElement>(null);
   const input = useRef<HTMLInputElement>(null);
 
@@ -113,6 +114,12 @@ export function Editor({ slug, siteUrl }: { slug: string; siteUrl?: string }) {
   const publishedHref = state.demo ? "/published" : siteUrl;
   const unpublishedCount = state.history.filter((c) => c.status === "approved" && !c.published).length;
   const selName = targetName(state.preview, target);
+  const canPublish = !busy && state.unpublished && !state.pending;
+  const publishHint = state.pending
+    ? "Approve or reject the pending change first"
+    : !state.unpublished
+      ? "Nothing new to publish"
+      : `Publish ${unpublishedCount} approved change${unpublishedCount === 1 ? "" : "s"}`;
   const activeTarget = selName ? target : null;
 
   return (
@@ -131,29 +138,44 @@ export function Editor({ slug, siteUrl }: { slug: string; siteUrl?: string }) {
           </span>
         </div>
         <div className="bar-right">
-          <span
-            className={`cost${out ? " cost-out" : ""}`}
-            data-testid="credits"
-            title={`Built-in phrases are free (${a.parser} so far). Only requests that need the AI helper use a credit (${a.ai} so far); repeated ones are reused for free (${a.aiCache}).`}
-          >
-            {creditsLabel(state.credits.balance)}
-            {out ? " · AI helper paused" : ""}
-          </span>
-          <button type="button" className="btn btn-ghost bar-menu" onClick={() => setMenuOpen(true)}>
-            Menu
+          {/* On phones these collapse into the "More" menu; on desktop they sit inline. */}
+          <div className={`bar-more${moreOpen ? " is-open" : ""}`} onClick={() => setMoreOpen(false)}>
+            <span className="more-status">
+              Editing draft · v{state.draftVersion} · live v{state.publishedVersion}
+              {state.unpublished ? ` · ${unpublishedCount} unpublished` : " · up to date"}
+            </span>
+            <span
+              className={`cost${out ? " cost-out" : ""}`}
+              data-testid="credits"
+              title={`Built-in phrases are free (${a.parser} so far). Only requests that need the AI helper use a credit (${a.ai} so far); repeated ones are reused for free (${a.aiCache}).`}
+            >
+              {creditsLabel(state.credits.balance)}
+              {out ? " · AI helper paused" : ""}
+            </span>
+            <button type="button" className="btn btn-ghost bar-menu" onClick={() => setMenuOpen(true)}>
+              Menu
+            </button>
+            <button type="button" className="btn btn-ghost" aria-expanded={historyOpen} onClick={() => setHistoryOpen((o) => !o)}>
+              History{state.history.length ? <span className="count">{state.history.length}</span> : null}
+            </button>
+            {publishedHref && (
+              <a className="btn btn-ghost bar-link" href={publishedHref} target="_blank" rel="noreferrer">
+                {state.demo ? "Your published preview ↗" : "Published site ↗"}
+              </a>
+            )}
+          </div>
+          <button type="button" className="btn btn-ghost more-btn" aria-label="More" aria-expanded={moreOpen} onClick={() => setMoreOpen((o) => !o)}>
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <circle cx="4.5" cy="10" r="1.6" fill="currentColor" />
+              <circle cx="10" cy="10" r="1.6" fill="currentColor" />
+              <circle cx="15.5" cy="10" r="1.6" fill="currentColor" />
+            </svg>
           </button>
-          <button type="button" className="btn btn-ghost" aria-expanded={historyOpen} onClick={() => setHistoryOpen((o) => !o)}>
-            History{state.history.length ? <span className="count">{state.history.length}</span> : null}
-          </button>
-          {publishedHref && (
-            <a className="btn btn-ghost bar-link" href={publishedHref} target="_blank" rel="noreferrer">
-              {state.demo ? "Your published preview ↗" : "Published site ↗"}
-            </a>
-          )}
           <button
             type="button"
-            className="btn btn-primary"
-            disabled={busy || !state.unpublished || !!state.pending}
+            className="btn btn-publish"
+            disabled={!canPublish}
+            title={publishHint}
             onClick={() =>
               run(() => api.publish(slug), (r) => ({
                 tone: "ok",
@@ -164,9 +186,11 @@ export function Editor({ slug, siteUrl }: { slug: string; siteUrl?: string }) {
             }
           >
             Publish
+            {canPublish && unpublishedCount > 0 && <span className="publish-count">{unpublishedCount}</span>}
           </button>
         </div>
       </div>
+      {moreOpen && <div className="more-scrim" onClick={() => setMoreOpen(false)} aria-hidden="true" />}
 
       {state.demo && (
         <p className="demo-note" role="note">

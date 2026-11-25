@@ -8,6 +8,7 @@ import { ChangeCard } from "../components/ChangeCard.tsx";
 import { History } from "../components/History.tsx";
 import { MicButton } from "../components/MicButton.tsx";
 import { Editor } from "../components/Editor.tsx";
+import { itemNotes } from "../components/MenuPanel.tsx";
 import type { Change, SiteState } from "../lib/types.ts";
 
 const menu = parseMenu(sample);
@@ -246,5 +247,58 @@ describe("click-to-target", () => {
     const names = within(panel).getAllByRole("button", { pressed: false }).map((b) => b.textContent);
     expect(names.some((n) => n?.includes("Double Smash Burger"))).toBe(true);
     expect(names.some((n) => n?.includes("Margherita"))).toBe(false);
+  });
+});
+
+describe("menu panel checker notes", () => {
+  it("marks raw draft names and other findings so they read as known issues", () => {
+    const notes = itemNotes(menu);
+    expect(notes.get("garlic-knots")).toMatchObject({ severity: "info", label: "Publishes as “Garlic Knots”" });
+    expect(notes.get("truffle-pie")).toMatchObject({ severity: "error", label: "Price looks off" });
+    expect(notes.get("caesar-2")!.label).toMatch(/^Possible duplicate \+\d/);
+    expect(notes.has("margherita")).toBe(false);
+  });
+});
+
+describe("<Editor /> publish button", () => {
+  const s = (over: Partial<SiteState>): SiteState => ({
+    slug: "ember-and-elm",
+    draftVersion: 3,
+    publishedVersion: 1,
+    publishedAt: null,
+    unpublished: false,
+    settings: { autoApproveLowRisk: false },
+    draft: menu,
+    preview: menu,
+    pending: null,
+    history: [],
+    credits: { balance: 25, perAiCall: 1 },
+    activity: { parser: 0, ai: 0, aiCache: 0 },
+    demo: false,
+    sandboxIdleMinutes: null,
+    ...over,
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const serve = (st: SiteState) => vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => st })));
+
+  it("is disabled with a reason when there is nothing to publish or a change is pending", async () => {
+    serve(s({}));
+    render(<Editor slug="ember-and-elm" />);
+    const btn = await screen.findByRole("button", { name: /^Publish/ });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    expect(btn.getAttribute("title")).toBe("Nothing new to publish");
+    cleanup();
+    serve(s({ unpublished: true, pending: change }));
+    render(<Editor slug="ember-and-elm" />);
+    expect((await screen.findByRole("button", { name: /^Publish/ })).getAttribute("title")).toBe("Approve or reject the pending change first");
+  });
+
+  it("is enabled and shows the count of approved, unpublished changes", async () => {
+    serve(s({ unpublished: true, history: [{ ...change, id: "a", status: "approved" }, { ...change, id: "b", status: "approved" }] }));
+    render(<Editor slug="ember-and-elm" />);
+    const btn = await screen.findByRole("button", { name: /^Publish/ });
+    expect((btn as HTMLButtonElement).disabled).toBe(false);
+    expect(btn.textContent).toBe("Publish2");
+    expect(btn.getAttribute("title")).toBe("Publish 2 approved changes");
   });
 });

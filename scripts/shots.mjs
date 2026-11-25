@@ -35,6 +35,9 @@ for (const [name, opts] of Object.entries(views)) {
   await q.goto(EDITOR, { waitUntil: "networkidle" });
   await q.waitForTimeout(800);
   if (name === "mobile") {
+    await q.getByRole("button", { name: "More" }).click();
+    await q.waitForTimeout(400);
+    await q.screenshot({ path: `${OUT}/${prefix}-editor-more-${name}.png` });
     await q.getByRole("button", { name: "Menu", exact: true }).click();
     await q.waitForTimeout(500);
     await q.screenshot({ path: `${OUT}/${prefix}-editor-menu-sheet-${name}.png` });
