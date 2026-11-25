@@ -9,8 +9,18 @@ import { applySafeFixes, checkMenu, type Report } from "@restaurant-site-poc/men
  * Anything not safe to fix (prices, duplicates, allergen tags) is published as-is
  * and surfaced on /admin/report for the owner to decide.
  */
-// MENU_PATH lets the API's publish step rebuild the site from the published menu.
-const raw: unknown = process.env.MENU_PATH ? JSON.parse(readFileSync(process.env.MENU_PATH, "utf8")) : sample;
+// MENU_PATH (a file, used by the local Express publish step) or MENU_URL (the API's
+// /published.json, used by a hosted build hook) rebuild the site from the published menu.
+async function loadMenu(): Promise<unknown> {
+  if (process.env.MENU_PATH) return JSON.parse(readFileSync(process.env.MENU_PATH, "utf8"));
+  if (process.env.MENU_URL) {
+    const res = await fetch(process.env.MENU_URL);
+    if (!res.ok) throw new Error(`MENU_URL returned HTTP ${res.status}`);
+    return res.json();
+  }
+  return sample;
+}
+const raw = await loadMenu();
 export const sourceMenu: Menu = parseMenu(raw);
 export const reportBeforeFixes: Report = checkMenu(sourceMenu);
 const fixed = applySafeFixes(sourceMenu, reportBeforeFixes.findings);

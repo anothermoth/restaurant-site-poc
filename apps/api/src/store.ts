@@ -12,7 +12,13 @@ export interface SiteDoc {
   publishedVersion: number;
   publishedAt: Date | null;
   settings: { autoApproveLowRisk: boolean };
+  /** AI credits left. Parser commands and cache hits are free; a real model call costs 1. */
+  credits: number;
   updatedAt: Date;
+  /** Demo sandboxes only: the TTL index deletes the sandbox once this passes (bumped on every request). */
+  expiresAt?: Date;
+  /** Demo sandboxes only: the site this sandbox was copied from. */
+  sandboxOf?: string;
 }
 
 export type ChangeSource = "parser" | "llm" | "llm-cache";
@@ -35,6 +41,9 @@ export interface ChangeDoc {
   published: boolean;
   createdAt: Date;
   decidedAt: Date | null;
+  /** 1 when this change needed a real model call, else 0. */
+  credits: number;
+  expiresAt?: Date;
 }
 
 /** Append-only edit log: every proposal, decision, undo and publish. */
@@ -45,6 +54,7 @@ export interface EventDoc {
   utterance?: string;
   detail?: string;
   at: Date;
+  expiresAt?: Date;
 }
 
 /** One row per real model call (cache hits don't create rows), for the cost meter. */
@@ -53,7 +63,19 @@ export interface LlmCallDoc {
   utterance: string;
   outcome: "commands" | "clarify" | "refuse";
   usage: Usage;
+  /** Credits charged to the site for this call (1). Kept forever for margin reporting. */
+  credits: number;
+  /** For demo sandboxes, the site they were copied from (so margin can group them). */
+  account: string;
   at: Date;
+}
+
+/** Rate-limit windows and the daily spend meter. */
+export interface CounterDoc {
+  _id: string;
+  n: number;
+  usd?: number;
+  expiresAt: Date;
 }
 
 export interface LlmCacheDoc {
@@ -68,6 +90,7 @@ export interface Collections {
   events: Collection<EventDoc>;
   llmCalls: Collection<LlmCallDoc>;
   llmCache: Collection<LlmCacheDoc>;
+  counters: Collection<CounterDoc>;
 }
 
 export async function collections(db: Db): Promise<Collections> {
@@ -77,6 +100,7 @@ export async function collections(db: Db): Promise<Collections> {
     events: db.collection<EventDoc>("events"),
     llmCalls: db.collection<LlmCallDoc>("llm_calls"),
     llmCache: db.collection<LlmCacheDoc>("llm_cache"),
+    counters: db.collection<CounterDoc>("counters"),
   };
   await Promise.all([
     c.changes.createIndex({ slug: 1, createdAt: -1 }),
@@ -84,6 +108,12 @@ export async function collections(db: Db): Promise<Collections> {
     c.events.createIndex({ slug: 1, at: -1 }),
     c.llmCalls.createIndex({ slug: 1, at: -1 }),
     c.llmCache.createIndex({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 }),
+    c.llmCalls.createIndex({ at: -1 }),
+    // Documents with an `expiresAt` date are deleted by MongoDB's TTL monitor (runs about once a minute).
+    c.sites.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    c.changes.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    c.events.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    c.counters.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
   return c;
 }

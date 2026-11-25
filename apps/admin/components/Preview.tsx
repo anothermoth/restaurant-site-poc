@@ -7,8 +7,10 @@ import { formatHours } from "../lib/format.ts";
  * change. Every editable element carries the same data-edit-id the Astro site
  * uses; the ids a pending change touches are highlighted.
  */
-export function Preview({ menu, highlight = [] }: { menu: Menu; highlight?: string[] }) {
+export function Preview({ menu, highlight = [], published = false }: { menu: Menu; highlight?: string[]; published?: boolean }) {
   const hl = new Set(highlight);
+  // The published view drops hidden sections and items, exactly like the Astro menu page.
+  const categories = published ? menu.categories.filter((c) => !c.hidden).map((c) => ({ ...c, items: c.items.filter((i) => i.available) })) : menu.categories;
   const cls = (id: string, base = "") => `${base}${hl.has(id) ? " hl" : ""}`.trim();
   const r = menu.restaurant;
   return (
@@ -25,7 +27,7 @@ export function Preview({ menu, highlight = [] }: { menu: Menu; highlight?: stri
         </p>
       </header>
       <div data-edit-id="menu" className={cls("menu", "pv-menu")}>
-        {menu.categories.map((c) => (
+        {categories.map((c) => (
           <section key={c.id} data-edit-id={`category:${c.id}`} className={cls(`category:${c.id}`, c.hidden ? "pv-cat is-hidden" : "pv-cat")}>
             <h2>
               {c.name} {c.hidden && <span className="pv-flag">Hidden</span>}

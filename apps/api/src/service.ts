@@ -16,6 +16,7 @@ import {
   type MetaAction,
 } from "@restaurant-site-poc/command-engine";
 import type { ChangeDoc, Collections, SiteDoc } from "./store.ts";
+import { DEFAULT_LIMITS, type Limits } from "./config.ts";
 
 export class ServiceError extends Error {
   constructor(public status: number, message: string) {
@@ -24,7 +25,7 @@ export class ServiceError extends Error {
 }
 
 export interface PublishHook {
-  (slug: string, menu: Menu): Promise<{ file?: string; buildMs?: number }>;
+  (slug: string, menu: Menu): Promise<{ file?: string; buildMs?: number; buildHook?: string }>;
 }
 
 export interface ServiceDeps {
@@ -32,19 +33,40 @@ export interface ServiceDeps {
   llm: LlmConfig | null;
   fetchImpl?: FetchLike;
   onPublish?: PublishHook;
+  limits?: Partial<Limits>;
+  now?: () => Date;
 }
+
+/** Who is asking: used for per-session / per-IP rate limits. The IP is stored only as a hash. */
+export interface RequestCtx {
+  sessionId?: string;
+  ipHash?: string;
+}
+
+export type BlockReason = "credits" | "rate" | "cap" | "off";
+
+/** Demo sandbox slugs look like `<site>~<session>`. */
+export const SANDBOX_SEP = "~";
+export const isSandbox = (slug: string) => slug.includes(SANDBOX_SEP);
+export const accountOf = (slug: string) => slug.split(SANDBOX_SEP)[0]!;
+const DAY_MS = 86_400_000;
 
 export type ProposeResult =
   | { type: "change"; change: ChangeView; autoApproved: boolean }
   | { type: "meta"; action: MetaAction; message: string; change?: ChangeView }
-  | { type: "clarify"; question: string; options: ClarifyOption[]; source: string; usage?: ChangeDoc["usage"] }
-  | { type: "refuse"; message: string; source: string; usage?: ChangeDoc["usage"] };
+  | { type: "clarify"; question: string; options: ClarifyOption[]; source: string; credits: number }
+  | { type: "refuse"; message: string; source: string; credits: number; blocked?: BlockReason };
 
-export type ChangeView = Omit<ChangeDoc, "_id"> & { id: string; highlight: string[] };
+/**
+ * What clients see. Token counts and dollar cost stay server-side (llm_calls and
+ * the admin margin report); clients only see credits.
+ */
+export type ChangeView = Omit<ChangeDoc, "_id" | "usage" | "expiresAt"> & { id: string; highlight: string[] };
 
 export function view(c: ChangeDoc): ChangeView {
-  const { _id, ...rest } = c;
-  return { id: _id.toHexString(), ...rest, highlight: [...new Set(c.ops.flatMap((o) => editIdsForPath(o.path)))] };
+  const { _id, usage: _usage, expiresAt: _exp, ...rest } = c;
+  // Clients see the site slug, never the sandbox key.
+  return { id: _id.toHexString(), ...rest, slug: accountOf(c.slug), credits: rest.credits ?? (c.source === "llm" ? 1 : 0), highlight: [...new Set(c.ops.flatMap((o) => editIdsForPath(o.path)))] };
 }
 
 function mongoCache(c: Collections): CacheStore {
@@ -63,16 +85,78 @@ export class EditService {
     return this.d.c;
   }
 
-  async seed(slug: string, menu: Menu, { reset = false } = {}) {
+  get limits(): Limits {
+    return { ...DEFAULT_LIMITS, ...this.d.limits };
+  }
+
+  private now() {
+    return this.d.now ? this.d.now() : new Date();
+  }
+
+  /** Sandbox rows (changes, events) expire a day after they're written; the sandbox itself expires sooner. */
+  private ttl(slug: string): { expiresAt?: Date } {
+    return isSandbox(slug) ? { expiresAt: new Date(this.now().getTime() + DAY_MS) } : {};
+  }
+
+  /**
+   * Creates the site if it doesn't exist. `reset` restores the seed menu but keeps the
+   * credit balance, so resetting can't be used to refill credits.
+   */
+  async seed(slug: string, menu: Menu, { reset = false, expiresAt, sandboxOf }: { reset?: boolean; expiresAt?: Date; sandboxOf?: string } = {}) {
     const exists = await this.c.sites.findOne({ _id: slug });
-    if (exists && !reset) return;
+    if (exists && !reset) {
+      if (typeof exists.credits !== "number") await this.c.sites.updateOne({ _id: slug }, { $set: { credits: this.limits.defaultCredits } });
+      return;
+    }
     if (reset) await Promise.all([this.c.changes.deleteMany({ slug }), this.c.events.deleteMany({ slug })]);
-    const now = new Date();
-    await this.c.sites.replaceOne(
-      { _id: slug },
-      { draft: menu, published: menu, draftVersion: 1, publishedVersion: 1, publishedAt: null, settings: { autoApproveLowRisk: false }, updatedAt: now },
-      { upsert: true },
-    );
+    const now = this.now();
+    const credits = typeof exists?.credits === "number" ? exists.credits : this.limits.defaultCredits;
+    const doc: Omit<SiteDoc, "_id"> = {
+      draft: menu,
+      published: menu,
+      draftVersion: 1,
+      publishedVersion: 1,
+      publishedAt: null,
+      settings: { autoApproveLowRisk: false },
+      credits,
+      updatedAt: now,
+      ...(expiresAt ? { expiresAt } : {}),
+      ...(sandboxOf ? { sandboxOf } : {}),
+    };
+    await this.c.sites.replaceOne({ _id: slug }, doc, { upsert: true });
+  }
+
+  /** Creates the demo sandbox on first use and pushes its expiry back on every request. */
+  async touchSandbox(slug: string, seedMenu: Menu, idleMs: number) {
+    const expiresAt = new Date(this.now().getTime() + idleMs);
+    const r = await this.c.sites.updateOne({ _id: slug }, { $set: { expiresAt } });
+    if (r.matchedCount === 0) {
+      try {
+        await this.c.changes.deleteMany({ slug });
+        await this.c.events.deleteMany({ slug });
+        await this.c.sites.insertOne({
+          _id: slug,
+          draft: seedMenu,
+          published: seedMenu,
+          draftVersion: 1,
+          publishedVersion: 1,
+          publishedAt: null,
+          settings: { autoApproveLowRisk: false },
+          credits: this.limits.defaultCredits,
+          updatedAt: this.now(),
+          expiresAt,
+          sandboxOf: accountOf(slug),
+        });
+      } catch (e) {
+        // Two first requests raced; the other one created it.
+        if (!(e && typeof e === "object" && "code" in e && e.code === 11000)) throw e;
+      }
+    }
+  }
+
+  async setCredits(slug: string, credits: number) {
+    await this.site(slug);
+    await this.c.sites.updateOne({ _id: slug }, { $set: { credits: Math.max(0, Math.floor(credits)) } });
   }
 
   async site(slug: string): Promise<SiteDoc> {
@@ -108,8 +192,15 @@ export class EditService {
       preview,
       pending: pending ? view(pending) : null,
       history: history.map(view),
-      usage: await this.usage(slug),
+      credits: { balance: site.credits ?? this.limits.defaultCredits, perAiCall: 1 },
+      activity: await this.activity(slug),
     };
+  }
+
+  /** How requests were resolved, for the admin bar. No dollar amounts. */
+  async activity(slug: string) {
+    const u = await this.usage(slug);
+    return { parser: u.changesBySource.parser, ai: u.llmCalls, aiCache: u.changesBySource["llm-cache"] };
   }
 
   async usage(slug: string) {
@@ -144,41 +235,172 @@ export class EditService {
   }
 
   private async log(slug: string, type: Parameters<Collections["events"]["insertOne"]>[0]["type"], extra: { changeId?: ObjectId; utterance?: string; detail?: string } = {}) {
-    await this.c.events.insertOne({ slug, type, ...extra, at: new Date() });
+    await this.c.events.insertOne({ slug, type, ...extra, at: this.now(), ...this.ttl(slug) });
   }
 
-  async propose(slug: string, utterance: string, input: "voice" | "text" = "text"): Promise<ProposeResult> {
+  private dayKey() {
+    return this.now().toISOString().slice(0, 10);
+  }
+
+  /** Today's (UTC) real model spend across every site and sandbox. */
+  async spendToday(): Promise<{ day: string; usd: number; calls: number }> {
+    const day = this.dayKey();
+    const d = await this.c.counters.findOne({ _id: `spend:${day}` });
+    return { day, usd: d?.usd ?? 0, calls: d?.n ?? 0 };
+  }
+
+  /** Counts a hit in a fixed one-hour window and says whether it's over the limit. */
+  private async overLimit(key: string, max: number | null): Promise<boolean> {
+    if (max === null) return false;
+    const hour = Math.floor(this.now().getTime() / 3_600_000);
+    const r = await this.c.counters.findOneAndUpdate(
+      { _id: `rate:${key}:${hour}` },
+      { $inc: { n: 1 }, $setOnInsert: { expiresAt: new Date((hour + 2) * 3_600_000) } },
+      { upsert: true, returnDocument: "after" },
+    );
+    return (r?.n ?? 1) > max;
+  }
+
+  /**
+   * The gate in front of every paid model call (cache hits never reach it):
+   * daily spend cap → rate limits → take 1 credit. Returns a block reason or null.
+   */
+  private async gate(slug: string, ctx: RequestCtx): Promise<{ reason: BlockReason; message: string } | null> {
+    const L = this.limits;
+    if (L.dailySpendCapUsd !== null && (await this.spendToday()).usd >= L.dailySpendCapUsd) {
+      return { reason: "cap", message: "The AI helper is paused for today because the demo hit its daily spending cap." };
+    }
+    if ((ctx.sessionId && (await this.overLimit(`s:${ctx.sessionId}`, L.llmPerSessionHour))) || (ctx.ipHash && (await this.overLimit(`ip:${ctx.ipHash}`, L.llmPerIpHour)))) {
+      return { reason: "rate", message: "That's a lot of AI requests in a short time, so the AI helper is paused for a bit." };
+    }
+    const took = await this.c.sites.updateOne({ _id: slug, credits: { $gte: 1 } }, { $inc: { credits: -1 } });
+    if (took.modifiedCount === 0) return { reason: "credits", message: "You're out of AI credits, so the AI helper is paused." };
+    return null;
+  }
+
+  private async recordSpend(usd: number) {
+    const day = this.dayKey();
+    await this.c.counters.updateOne(
+      { _id: `spend:${day}` },
+      { $inc: { n: 1, usd }, $setOnInsert: { expiresAt: new Date(Date.parse(day) + 8 * DAY_MS) } },
+      { upsert: true },
+    );
+  }
+
+  /**
+   * Internal unit economics: real token cost vs. credits charged, per day and per account.
+   * Never exposed to editors; the admin route needs ADMIN_TOKEN.
+   */
+  async margin({ days = 7 }: { days?: number } = {}) {
+    const since = new Date(this.now().getTime() - days * DAY_MS);
+    const rows = await this.c.llmCalls
+      .aggregate<{ _id: { day: string; account: string }; calls: number; credits: number; costUsd: number; input: number; cached: number; output: number }>([
+        { $match: { at: { $gte: since } } },
+        {
+          $group: {
+            _id: { day: { $dateToString: { format: "%Y-%m-%d", date: "$at" } }, account: { $ifNull: ["$account", "$slug"] } },
+            calls: { $sum: 1 },
+            credits: { $sum: { $ifNull: ["$credits", 1] } },
+            costUsd: { $sum: "$usage.costUsd" },
+            input: { $sum: "$usage.inputTokens" },
+            cached: { $sum: "$usage.cachedInputTokens" },
+            output: { $sum: "$usage.outputTokens" },
+          },
+        },
+        { $sort: { "_id.day": -1, "_id.account": 1 } },
+      ])
+      .toArray();
+    const price = this.limits.creditPriceUsd;
+    const shape = (r: { calls: number; credits: number; costUsd: number; input: number; cached: number; output: number }) => {
+      const revenueUsd = r.credits * price;
+      const marginUsd = revenueUsd - r.costUsd;
+      return {
+        calls: r.calls,
+        creditsCharged: r.credits,
+        inputTokens: r.input,
+        cachedInputTokens: r.cached,
+        outputTokens: r.output,
+        costUsd: round(r.costUsd),
+        avgCostPerCallUsd: r.calls ? round(r.costUsd / r.calls) : 0,
+        revenueUsd: round(revenueUsd),
+        marginUsd: round(marginUsd),
+        marginPct: revenueUsd ? Math.round((marginUsd / revenueUsd) * 1000) / 10 : null,
+      };
+    };
+    const total = rows.reduce((a, r) => ({ calls: a.calls + r.calls, credits: a.credits + r.credits, costUsd: a.costUsd + r.costUsd, input: a.input + r.input, cached: a.cached + r.cached, output: a.output + r.output }), { calls: 0, credits: 0, costUsd: 0, input: 0, cached: 0, output: 0 });
+    const cacheHits = await this.c.changes.countDocuments({ source: "llm-cache", createdAt: { $gte: since } });
+    return {
+      days,
+      creditPriceUsd: price,
+      limits: this.limits,
+      today: await this.spendToday(),
+      total: { ...shape(total), cacheHits },
+      rows: rows.map((r) => ({ day: r._id.day, account: r._id.account, ...shape(r) })),
+    };
+  }
+
+  async propose(slug: string, utterance: string, input: "voice" | "text" = "text", ctx: RequestCtx = {}): Promise<ProposeResult> {
     const site = await this.site(slug);
     const parsed = parse(utterance, site.draft);
 
     if (parsed.kind === "meta") return this.meta(slug, parsed.action);
     if (parsed.kind === "clarify") {
       await this.log(slug, "clarify", { utterance });
-      return { type: "clarify", question: parsed.question, options: parsed.options, source: "parser" };
+      return { type: "clarify", question: parsed.question, options: parsed.options, source: "parser", credits: 0 };
     }
 
     let commands: unknown[];
     let source: ChangeDoc["source"] = "parser";
     let usage: ChangeDoc["usage"] = null;
+    let credits = 0;
     if (parsed.kind === "commands") {
       commands = parsed.commands;
     } else {
-      const fb = await llmFallback(utterance, site.draft, { config: this.d.llm, cache: mongoCache(this.c), fetchImpl: this.d.fetchImpl });
+      let blocked: { reason: BlockReason; message: string } | null = null;
+      let charged = false;
+      let fb;
+      try {
+        fb = await llmFallback(utterance, site.draft, {
+          config: this.d.llm,
+          cache: mongoCache(this.c),
+          fetchImpl: this.d.fetchImpl,
+          beforeCall: async () => {
+            blocked = await this.gate(slug, ctx);
+            charged = !blocked;
+            return blocked?.message ?? null;
+          },
+        });
+      } catch (e) {
+        // The model call failed after we took a credit: give it back.
+        if (charged) await this.c.sites.updateOne({ _id: slug }, { $inc: { credits: 1 } });
+        throw e;
+      }
       if (fb.source === "unavailable") {
+        const b = blocked as { reason: BlockReason; message: string } | null;
         await this.log(slug, "refused", { utterance, detail: fb.reason });
-        return { type: "refuse", message: `${fb.reason} Try "change the price of X to $12" or "hide X".`, source: "parser" };
+        return {
+          type: "refuse",
+          message: `${fb.reason} Built-in phrases still work, for example "change the price of X to $12", "hide X" or "mark X as vegan".`,
+          source: "parser",
+          credits: 0,
+          blocked: b?.reason ?? "off",
+        };
       }
       source = fb.source;
       usage = fb.usage;
+      credits = fb.usage ? 1 : 0;
       const outcome = "commands" in fb.reply ? "commands" : "clarify" in fb.reply ? "clarify" : "refuse";
-      if (fb.usage) await this.c.llmCalls.insertOne({ slug, utterance, outcome, usage: fb.usage, at: new Date() });
+      if (fb.usage) {
+        await this.c.llmCalls.insertOne({ slug, account: accountOf(slug), utterance, outcome, usage: fb.usage, credits, at: this.now() });
+        await this.recordSpend(fb.usage.costUsd);
+      }
       if ("clarify" in fb.reply) {
         await this.log(slug, "clarify", { utterance });
-        return { type: "clarify", question: fb.reply.clarify.question, options: fb.reply.clarify.options.map((o) => ({ label: o, utterance: o })), source, usage };
+        return { type: "clarify", question: fb.reply.clarify.question, options: fb.reply.clarify.options.map((o) => ({ label: o, utterance: o })), source, credits };
       }
       if ("refuse" in fb.reply) {
         await this.log(slug, "refused", { utterance, detail: fb.reply.refuse.reason });
-        return { type: "refuse", message: fb.reply.refuse.reason, source, usage };
+        return { type: "refuse", message: fb.reply.refuse.reason, source, credits };
       }
       commands = fb.reply.commands;
     }
@@ -189,12 +411,12 @@ export class EditService {
     } catch (e) {
       if (e instanceof CommandError) {
         await this.log(slug, "error", { utterance, detail: e.message });
-        return { type: "refuse", message: e.message, source, usage };
+        return { type: "refuse", message: e.message, source, credits };
       }
       throw e;
     }
 
-    const now = new Date();
+    const now = this.now();
     await this.c.changes.updateMany({ slug, status: "pending" }, { $set: { status: "superseded", decidedAt: now } });
     const slim = (f: { ruleId: string; severity: "error" | "warning" | "info"; message: string }) => ({ ruleId: f.ruleId, severity: f.severity, message: f.message });
     const doc: ChangeDoc = {
@@ -211,9 +433,11 @@ export class EditService {
       baseVersion: site.draftVersion,
       status: "pending",
       usage,
+      credits,
       published: false,
       createdAt: now,
       decidedAt: null,
+      ...this.ttl(slug),
     };
     await this.c.changes.insertOne(doc);
     await this.log(slug, "proposed", { changeId: doc._id, utterance });
@@ -241,9 +465,10 @@ export class EditService {
     return { type: "meta", action, message: `${action === "approve" ? "Approved" : "Rejected"}: ${c.summary.join("; ")}`, change: c };
   }
 
-  private async getChange(id: string): Promise<ChangeDoc> {
+  /** `slug`, when given, must own the change (demo sandboxes can't touch each other's changes). */
+  private async getChange(id: string, slug?: string): Promise<ChangeDoc> {
     if (!ObjectId.isValid(id)) throw new ServiceError(400, "Bad change id");
-    const c = await this.c.changes.findOne({ _id: new ObjectId(id) });
+    const c = await this.c.changes.findOne({ _id: new ObjectId(id), ...(slug ? { slug } : {}) });
     if (!c) throw new ServiceError(404, "No such change");
     return c;
   }
@@ -257,8 +482,8 @@ export class EditService {
     if (r.matchedCount === 0) throw new ServiceError(409, "The draft changed since this edit was proposed. Say it again to re-preview.");
   }
 
-  async approve(id: string): Promise<ChangeView> {
-    const c = await this.getChange(id);
+  async approve(id: string, slug?: string): Promise<ChangeView> {
+    const c = await this.getChange(id, slug);
     if (c.status !== "pending") throw new ServiceError(409, `Change is ${c.status}`);
     const site = await this.site(c.slug);
     if (site.draftVersion !== c.baseVersion) throw new ServiceError(409, "The draft changed since this edit was proposed. Say it again to re-preview.");
@@ -269,8 +494,8 @@ export class EditService {
     return view({ ...c, status: "approved", decidedAt });
   }
 
-  async reject(id: string): Promise<ChangeView> {
-    const c = await this.getChange(id);
+  async reject(id: string, slug?: string): Promise<ChangeView> {
+    const c = await this.getChange(id, slug);
     if (c.status !== "pending") throw new ServiceError(409, `Change is ${c.status}`);
     const decidedAt = new Date();
     await this.c.changes.updateOne({ _id: c._id }, { $set: { status: "rejected", decidedAt } });
@@ -281,7 +506,7 @@ export class EditService {
   /** Undo a specific approved change, or the latest one. Free: no model call. */
   async undo(slug: string, id?: string): Promise<ChangeView> {
     const c = id
-      ? await this.getChange(id)
+      ? await this.getChange(id, slug)
       : await this.c.changes.findOne({ slug, status: "approved" }, { sort: { decidedAt: -1 } });
     if (!c) throw new ServiceError(404, "Nothing to undo");
     if (c.status !== "approved") throw new ServiceError(409, `Change is ${c.status}`);
@@ -320,3 +545,5 @@ export class EditService {
     await this.c.sites.updateOne({ _id: slug }, { $set });
   }
 }
+
+const round = (n: number) => Math.round(n * 1e6) / 1e6;

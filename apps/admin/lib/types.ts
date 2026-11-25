@@ -8,15 +8,6 @@ export interface Op {
   after: unknown;
 }
 
-export interface Usage {
-  model: string;
-  inputTokens: number;
-  cachedInputTokens: number;
-  outputTokens: number;
-  costUsd: number;
-  latencyMs: number;
-}
-
 export interface Change {
   id: string;
   utterance: string;
@@ -28,7 +19,8 @@ export interface Change {
   risk: "low" | "high";
   findings: { added: Finding[]; resolved: Finding[] };
   status: "pending" | "approved" | "rejected" | "superseded" | "undone";
-  usage: Usage | null;
+  /** 1 if this change needed a real AI call, else 0. */
+  credits: number;
   published: boolean;
   createdAt: string;
   highlight: string[];
@@ -51,14 +43,10 @@ export interface SiteState {
   preview: Menu;
   pending: Change | null;
   history: Change[];
-  usage: {
-    changesBySource: { parser: number; llm: number; "llm-cache": number };
-    llmCalls: number;
-    inputTokens: number;
-    cachedInputTokens: number;
-    outputTokens: number;
-    estimatedCostUsd: number;
-  };
+  credits: { balance: number; perAiCall: number };
+  activity: { parser: number; ai: number; aiCache: number };
+  demo: boolean;
+  sandboxIdleMinutes: number | null;
 }
 
 export interface ClarifyOption {
@@ -69,5 +57,11 @@ export interface ClarifyOption {
 export type ProposeResult =
   | { type: "change"; change: Change; autoApproved: boolean }
   | { type: "meta"; action: string; message: string }
-  | { type: "clarify"; question: string; options: ClarifyOption[]; source: string; usage?: Usage | null }
-  | { type: "refuse"; message: string; source: string; usage?: Usage | null };
+  | { type: "clarify"; question: string; options: ClarifyOption[]; source: string; credits: number }
+  | { type: "refuse"; message: string; source: string; credits: number; blocked?: "credits" | "rate" | "cap" | "off" };
+
+export interface PublishResult {
+  publishedVersion: number;
+  buildMs?: number;
+  previewPath?: string;
+}

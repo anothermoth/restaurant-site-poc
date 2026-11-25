@@ -1,7 +1,9 @@
 /* global window, document */
 /**
- * Records the demo video and screenshots against a running stack:
- *   mongod, API (:4000), admin (`next start`, :3000), and `astro preview` (:4321).
+ * Records the demo video and screenshots against a running stack. Two modes:
+ * - DEMO_MODE=1 admin (`next start`, in-process API, :3000) with ADMIN_TOKEN set:
+ *   publish goes to the visitor's private preview, and the run ends at 0 credits;
+ * - otherwise: Express API (:4000) + admin + `astro preview` (:4321), publish rebuilds Astro.
  * Speech recognition is simulated in the recording (headless Chrome has no mic):
  * a stand-in SpeechRecognition returns a scripted transcript when the
  * push-to-talk button is released. Everything after the transcript is real.
@@ -9,11 +11,14 @@
  *   CHROME_PATH=/usr/bin/google-chrome node scripts/record-demo.mjs
  */
 import { chromium } from "playwright-core";
+import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 
 const ADMIN = process.env.ADMIN_URL ?? "http://localhost:3000";
 const SITE = process.env.SITE_URL ?? "http://localhost:4321";
 const OUT = "docs";
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN ?? "";
+const DEMO = (await (await fetch(`${ADMIN}/api/health`)).json()).demo === true;
 const VID = "docs/.video-tmp";
 rmSync(VID, { recursive: true, force: true });
 mkdirSync(VID, { recursive: true });
@@ -72,7 +77,7 @@ await pause(800);
 await caption("Owner-facing editor (Next.js). Edits are previews until approved and published.");
 await pause(2200);
 
-await caption("🎙 Push-to-talk: “Change the price of the margarita to $16.50” (parser match, $0)");
+await caption("🎙 Push-to-talk: “Change the price of the margarita to $16.50” (built-in phrase: free, no credit)");
 await speak("Change the price of the margarita to $16.50");
 await page.waitForSelector("section.change");
 await page.locator('[data-edit-id="item:margherita.price"]').scrollIntoViewIfNeeded();
@@ -89,7 +94,7 @@ await pause(1800);
 await page.getByRole("button", { name: "Approve" }).click();
 await pause(1200);
 
-await caption("Not in the grammar → LLM fallback with a compact catalog: “knock a dollar off the smash burger”");
+await caption("Not a built-in phrase → AI fallback (1 credit): “knock a dollar off the smash burger”");
 await type("knock a dollar off the smash burger");
 await page.waitForSelector("section.change", { timeout: 15000 });
 await page.locator('[data-edit-id="item:smash-burger.price"]').scrollIntoViewIfNeeded();
@@ -115,17 +120,58 @@ await page.getByRole("button", { name: /Undo: Hide "Burrata/ }).click();
 await pause(1800);
 await page.screenshot({ path: `${OUT}/editor-history.png`, fullPage: true });
 
-await caption("Publish → API writes the menu JSON and re-runs the Astro build");
-await page.locator(".edit-bar").getByRole("button", { name: "Publish" }).click();
-await page.waitForSelector(".reply-ok >> text=Published", { timeout: 60000 });
-await pause(2000);
+if (DEMO) {
+  await caption("Publish → your private preview (the public demo never changes the live site)");
+  await page.locator(".edit-bar").getByRole("button", { name: "Publish" }).click();
+  await page.waitForSelector(".reply-ok >> text=Published", { timeout: 60000 });
+  await pause(1800);
+  await page.goto(`${ADMIN}/published`, { waitUntil: "networkidle" });
+  await page.locator('[data-edit-id="category:pizza"]').scrollIntoViewIfNeeded();
+  await caption("Published preview: margherita $16.50, burrata back after the undo");
+  await pause(2600);
+  await page.screenshot({ path: `${OUT}/demo-published-preview.png` });
 
-await caption("Published static site (Astro) now shows the approved changes");
-await page.goto(`${SITE}/menu#pizza`, { waitUntil: "networkidle" });
-await caption("Published static site (Astro) now shows the approved changes");
-await pause(3000);
+  // End state: this visitor has used up their credits. (Set through the internal admin API.)
+  const sid = (await context.cookies(ADMIN)).find((c) => c.name === "rsp_sid").value;
+  const sandbox = `ember-and-elm~${createHash("sha256").update(`sbx:${sid}`).digest("base64url").slice(0, 22)}`;
+  const r = await fetch(`${ADMIN}/api/admin/sites/${encodeURIComponent(sandbox)}/credits`, {
+    method: "PUT",
+    headers: { "content-type": "application/json", "x-admin-token": ADMIN_TOKEN },
+    body: JSON.stringify({ credits: 0 }),
+  });
+  if (!r.ok) throw new Error(`set credits: HTTP ${r.status}`);
+  await page.goto(ADMIN, { waitUntil: "networkidle" });
+  await caption("Out of credits → the AI helper pauses, with no model call…");
+  await type("put the desserts right after the starters please");
+  await page.waitForSelector(".reply-warn");
+  await pause(2400);
+  await page.screenshot({ path: `${OUT}/editor-credits-paused.png` });
+  await caption("…and built-in phrases still work, free");
+  await speak("Mark the black bean burger as vegan");
+  await page.waitForSelector("section.change");
+  await pause(2600);
+} else {
+  await caption("Publish → API writes the menu JSON and re-runs the Astro build");
+  await page.locator(".edit-bar").getByRole("button", { name: "Publish" }).click();
+  await page.waitForSelector(".reply-ok >> text=Published", { timeout: 60000 });
+  await pause(2000);
+  await caption("Published static site (Astro) now shows the approved changes");
+  await page.goto(`${SITE}/menu#pizza`, { waitUntil: "networkidle" });
+  await caption("Published static site (Astro) now shows the approved changes");
+  await pause(3000);
+}
 
 await context.close();
+if (DEMO && ADMIN_TOKEN) {
+  // Internal margin view (separate context, not in the video).
+  const ctx2 = await browser.newContext({ viewport: { width: 1200, height: 700 } });
+  const p2 = await ctx2.newPage();
+  await p2.addInitScript((t) => sessionStorage.setItem("rsp-admin-token", t), ADMIN_TOKEN);
+  await p2.goto(`${ADMIN}/dev`, { waitUntil: "networkidle" });
+  await p2.waitForSelector(".kpis");
+  await p2.screenshot({ path: `${OUT}/dev-margin.png` });
+  await ctx2.close();
+}
 await browser.close();
 const [video] = readdirSync(VID).filter((f) => f.endsWith(".webm"));
 renameSync(`${VID}/${video}`, `${OUT}/demo.webm`);

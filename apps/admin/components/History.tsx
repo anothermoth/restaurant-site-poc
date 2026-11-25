@@ -1,5 +1,5 @@
 import type { Change } from "../lib/types.ts";
-import { usd } from "../lib/format.ts";
+import { costLine } from "../lib/format.ts";
 
 export function History({ items, onUndo, busy }: { items: Change[]; onUndo: (id: string) => void; busy?: boolean }) {
   if (!items.length) return <p className="muted small">No edits yet.</p>;
@@ -12,7 +12,7 @@ export function History({ items, onUndo, busy }: { items: Change[]; onUndo: (id:
             {c.published && <span className="chip chip-live">live</span>}
             <span className="h-summary">{c.summary.join("; ")}</span>
             <div className="muted small">
-              “{c.utterance}” · {c.input} · {c.source === "parser" ? "parser $0" : c.source === "llm-cache" ? "AI cache $0" : `AI ${usd(c.usage?.costUsd ?? 0)}`}
+              “{c.utterance}” · {c.input} · {costLine(c.source, c.credits)}
             </div>
           </div>
           {c.status === "approved" && (

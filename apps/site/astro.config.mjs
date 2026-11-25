@@ -3,8 +3,9 @@ import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 
 export default defineConfig({
-  // Placeholder origin used for canonical URLs and JSON-LD. Not deployed anywhere.
-  site: "https://example.com",
+  // Origin for canonical URLs, Open Graph and JSON-LD. Set SITE_URL when deploying
+  // (e.g. the Cloudflare Pages URL); the placeholder is used for local builds.
+  site: process.env.SITE_URL ?? "https://example.com",
   output: "static",
   integrations: [react()],
   build: {

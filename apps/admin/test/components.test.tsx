@@ -7,7 +7,8 @@ import { Preview } from "../components/Preview.tsx";
 import { ChangeCard } from "../components/ChangeCard.tsx";
 import { History } from "../components/History.tsx";
 import { MicButton } from "../components/MicButton.tsx";
-import type { Change } from "../lib/types.ts";
+import { Editor } from "../components/Editor.tsx";
+import type { Change, SiteState } from "../lib/types.ts";
 
 const menu = parseMenu(sample);
 
@@ -22,7 +23,7 @@ const change: Change = {
   risk: "high",
   findings: { added: [], resolved: [{ ruleId: "price-outlier", severity: "error", message: "Truffle Pie is 10x the median" }] },
   status: "pending",
-  usage: null,
+  credits: 0,
   published: false,
   createdAt: new Date().toISOString(),
   highlight: ["item:margherita", "item:margherita.price"],
@@ -53,22 +54,17 @@ describe("<ChangeCard />", () => {
     expect(screen.getByText("$16.50").className).toBe("after");
     expect(screen.getByText(/Needs approval/)).toBeTruthy();
     expect(screen.getByText(/Fixes: Truffle Pie/)).toBeTruthy();
-    expect(screen.getByText(/no AI · \$0/)).toBeTruthy();
+    expect(screen.getByText(/Matched instantly · free/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Approve" }));
     fireEvent.click(screen.getByRole("button", { name: "Reject" }));
     expect(onApprove).toHaveBeenCalledOnce();
     expect(onReject).toHaveBeenCalledOnce();
   });
 
-  it("shows token counts and cost for AI-proposed changes", () => {
-    render(
-      <ChangeCard
-        change={{ ...change, source: "llm", usage: { model: "m", inputTokens: 640, cachedInputTokens: 512, outputTokens: 28, costUsd: 0.00033, latencyMs: 900 } }}
-        onApprove={() => {}}
-        onReject={() => {}}
-      />,
-    );
-    expect(screen.getByText(/640 in \(512 cached\) \/ 28 out · \$0\.00033/)).toBeTruthy();
+  it("shows the cost of AI-proposed changes in credits, never dollars", () => {
+    const { container } = render(<ChangeCard change={{ ...change, source: "llm", credits: 1 }} onApprove={() => {}} onReject={() => {}} />);
+    expect(screen.getByText("AI helper · 1 credit")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/\$0\.|tokens/);
   });
 });
 
@@ -115,5 +111,56 @@ describe("<MicButton />", () => {
       fireEvent.pointerUp(btn);
     });
     expect(onTranscript).toHaveBeenCalledWith("86 the burrata");
+  });
+});
+
+describe("<Preview published />", () => {
+  it("drops hidden sections and 86'd items, like the Astro menu page", () => {
+    const m = structuredClone(menu);
+    m.categories[0]!.items[0]!.available = false;
+    m.categories[4]!.hidden = true;
+    const { container } = render(<Preview menu={m} published />);
+    expect(container.querySelector(`[data-edit-id="item:${m.categories[0]!.items[0]!.id}"]`)).toBeNull();
+    expect(container.querySelector(`[data-edit-id="category:${m.categories[4]!.id}"]`)).toBeNull();
+    expect(container.querySelector(".pv-flag")).toBeNull();
+  });
+});
+
+describe("<Editor /> credits", () => {
+  const state = (balance: number, demo: boolean): SiteState => ({
+    slug: "ember-and-elm",
+    draftVersion: 1,
+    publishedVersion: 1,
+    publishedAt: null,
+    unpublished: false,
+    settings: { autoApproveLowRisk: false },
+    draft: menu,
+    preview: menu,
+    pending: null,
+    history: [],
+    credits: { balance, perAiCall: 1 },
+    activity: { parser: 3, ai: 2, aiCache: 1 },
+    demo,
+    sandboxIdleMinutes: demo ? 60 : null,
+  });
+  const serve = (s: SiteState) =>
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => s })));
+
+  it("shows 'N credits left' in the top bar instead of a dollar cost", async () => {
+    serve(state(98, false));
+    render(<Editor slug="ember-and-elm" siteUrl="http://localhost:4321" />);
+    expect((await screen.findByTestId("credits")).textContent).toBe("98 credits left");
+    expect(screen.getByRole("region", { name: "Edit mode" }).textContent).not.toMatch(/\$/);
+    expect(screen.getByRole("link", { name: /Published site/ }).getAttribute("href")).toBe("http://localhost:4321");
+    vi.unstubAllGlobals();
+  });
+
+  it("says the AI helper is paused at 0 credits, and in demo mode links the private preview", async () => {
+    serve(state(0, true));
+    render(<Editor slug="ember-and-elm" siteUrl="http://localhost:4321" />);
+    expect((await screen.findByTestId("credits")).textContent).toBe("0 credits left · AI helper paused");
+    expect(screen.getByRole("note").textContent).toMatch(/resets after 60 minutes/);
+    expect(screen.getByRole("link", { name: /Your published preview/ }).getAttribute("href")).toBe("/published");
+    vi.unstubAllGlobals();
   });
 });

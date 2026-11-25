@@ -82,3 +82,15 @@ code { background: #f0ebe4; padding: 1px 5px; border-radius: 5px; font-size: .85
 .side-col { position: sticky; top: 52px; align-self: start; max-height: calc(100vh - 64px); overflow-y: auto; }
 @media (max-width: 900px) { .side-col { position: static; max-height: none; } }
 .pv-price { align-self: flex-start; }
+
+/* Credits + demo */
+.edit-bar .cost-out { background: #fde7e4; color: #8a1c0c; }
+.reply-warn { background: #fff6e0; border-color: #f0c36d; }
+.demo-note { margin: 10px 16px 0; padding: 8px 12px; border-radius: 8px; background: #eef4ff; border: 1px solid #c9dafb; font-size: 0.9rem; }
+.published { max-width: 760px; margin: 0 auto; padding: 0 0 40px; }
+.published .demo-note { margin: 16px 0; }
+.dev { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 16px 0; }
+.kpis div { background: #fff; border: 1px solid #e3e3e3; border-radius: 8px; padding: 10px 12px; }
+.kpis dt { font-size: 0.8rem; color: #666; }
+.kpis dd { margin: 4px 0 0; font-size: 1.2rem; font-weight: 600; }

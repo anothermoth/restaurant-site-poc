@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@restaurant-site-poc/api": "0.1.0",
+    "@restaurant-site-poc/command-engine": "0.1.0",
+    "@restaurant-site-poc/menu-checker": "0.1.0",
     "@restaurant-site-poc/menu-schema": "0.1.0",
     "next": "^16.4.6",
     "react": "^19.3.1",

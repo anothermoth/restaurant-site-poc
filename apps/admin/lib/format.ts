@@ -1,5 +1,5 @@
 import { formatPrice } from "@restaurant-site-poc/menu-schema/pricing";
-import type { Op, Usage } from "./types.ts";
+import type { Op } from "./types.ts";
 
 const DAY: Record<string, string> = { Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat", Su: "Sun" };
 
@@ -27,13 +27,13 @@ export function fieldLabel(path: string): string {
   return `${id}`;
 }
 
-export function usd(n: number): string {
-  return n === 0 ? "$0" : n < 0.01 ? `$${n.toFixed(5)}` : `$${n.toFixed(4)}`;
+/** What a request cost the owner, in credits (never dollars). */
+export function costLine(source: string, credits: number): string {
+  if (source === "parser") return "Matched instantly · free";
+  if (source === "llm-cache") return "AI answer reused · free";
+  return credits ? `AI helper · ${credits} credit${credits === 1 ? "" : "s"}` : "free";
 }
 
-export function costLine(source: string, usage: Usage | null | undefined): string {
-  if (source === "parser") return "Matched instantly · no AI · $0";
-  if (source === "llm-cache") return "AI answer from cache · $0";
-  if (!usage) return "AI";
-  return `AI fallback · ${usage.inputTokens} in (${usage.cachedInputTokens} cached) / ${usage.outputTokens} out · ${usd(usage.costUsd)} · ${usage.latencyMs} ms`;
+export function creditsLabel(balance: number): string {
+  return `${balance} credit${balance === 1 ? "" : "s"} left`;
 }

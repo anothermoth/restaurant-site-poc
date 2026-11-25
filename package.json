@@ -23,7 +23,9 @@
     "dev:api": "npm run dev -w @restaurant-site-poc/api",
     "dev:admin": "npm run dev -w @restaurant-site-poc/admin",
     "measure:tokens": "tsx scripts/measure-commands.ts",
-    "demo:record": "node scripts/record-demo.mjs"
+    "demo:record": "node scripts/record-demo.mjs",
+    "deploy:pages": "SITE_URL=${SITE_URL:-https://restaurant-site-poc.pages.dev} npm run build -w @restaurant-site-poc/site && npx wrangler@4 pages deploy apps/site/dist --project-name restaurant-site-poc --branch main",
+    "dev:admin:demo": "DEMO_MODE=1 npm run dev -w @restaurant-site-poc/admin"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

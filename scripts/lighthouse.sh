@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # Measures the production build locally with Lighthouse (mobile + desktop presets).
 # Needs Chrome/Chromium installed. Usage: npm run build && ./scripts/lighthouse.sh
+# BASE_URL=https://restaurant-site-poc.pages.dev ./scripts/lighthouse.sh measures a deployed site instead.
 set -euo pipefail
 PORT=${PORT:-4321}
-npx astro preview --root apps/site --port "$PORT" >/dev/null 2>&1 &
-PREVIEW=$!
-trap 'kill $PREVIEW' EXIT
-sleep 3
-mkdir -p .lighthouse-tmp
+if [ -z "${BASE_URL:-}" ]; then
+  npx astro preview --root apps/site --port "$PORT" >/dev/null 2>&1 &
+  PREVIEW=$!
+  trap 'kill $PREVIEW' EXIT
+  sleep 3
+fi
+BASE=${BASE_URL:-http://localhost:$PORT}
+rm -rf .lighthouse-tmp && mkdir -p .lighthouse-tmp
 for page in "" menu; do
   name=${page:-home}
-  npx -y lighthouse@13 "http://localhost:$PORT/$page" --quiet --chrome-flags="--headless=new" \
+  npx -y lighthouse@13 "$BASE/$page" --quiet --chrome-flags="--headless=new" \
     --output=json --output-path=".lighthouse-tmp/$name-mobile.json"
-  npx -y lighthouse@13 "http://localhost:$PORT/$page" --preset=desktop --quiet --chrome-flags="--headless=new" \
+  npx -y lighthouse@13 "$BASE/$page" --preset=desktop --quiet --chrome-flags="--headless=new" \
     --output=json --output-path=".lighthouse-tmp/$name-desktop.json"
 done
 node -e '

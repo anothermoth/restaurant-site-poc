@@ -15,6 +15,7 @@ const slug = seed.restaurant.slug;
 let client: MongoClient;
 let db: Db;
 let app: ReturnType<typeof createApp>;
+let service: EditService;
 let published: Menu[] = [];
 const llmReply = { content: "{}" };
 const fetchImpl = vi.fn<FetchLike>(async () => ({
@@ -35,7 +36,7 @@ beforeEach(async () => {
   await db.dropDatabase();
   fetchImpl.mockClear();
   published = [];
-  const service = new EditService({
+  service = new EditService({
     c: await collections(db),
     llm: { apiKey: "test", baseUrl: "https://llm.test/v1", model: "grok-4.20-0309-non-reasoning", maxTokens: 220 },
     fetchImpl,
@@ -55,7 +56,7 @@ describe("edit flow", () => {
   it("proposes from the parser (no model call), previews, approves, publishes", async () => {
     const p = await say("change the price of the margarita to $16.50").expect(200);
     expect(p.body.type).toBe("change");
-    expect(p.body.change).toMatchObject({ source: "parser", risk: "high", status: "pending", usage: null, summary: ["Margherita: price $15.00 → $16.50"] });
+    expect(p.body.change).toMatchObject({ source: "parser", risk: "high", status: "pending", credits: 0, summary: ["Margherita: price $15.00 → $16.50"] });
     expect(p.body.change.highlight).toContain("item:margherita.price");
     expect(fetchImpl).not.toHaveBeenCalled();
 
@@ -63,7 +64,7 @@ describe("edit flow", () => {
     expect(price(s1.body.preview, "margherita")).toBe(1650);
     expect(price(s1.body.draft, "margherita")).toBe(1500); // not applied until approved
 
-    await request(app).post(`/api/changes/${p.body.change.id}/approve`).expect(200);
+    await request(app).post(`/api/sites/${slug}/changes/${p.body.change.id}/approve`).expect(200);
     const s2 = await request(app).get(`/api/sites/${slug}`).expect(200);
     expect(price(s2.body.draft, "margherita")).toBe(1650);
     expect(s2.body.unpublished).toBe(true);
@@ -81,8 +82,8 @@ describe("edit flow", () => {
     const s = await request(app).get(`/api/sites/${slug}`);
     expect(s.body.pending.id).toBe(b.body.change.id);
     expect(s.body.history[0]).toMatchObject({ id: a.body.change.id, status: "superseded" });
-    await request(app).post(`/api/changes/${b.body.change.id}/reject`).expect(200);
-    await request(app).post(`/api/changes/${b.body.change.id}/approve`).expect(409);
+    await request(app).post(`/api/sites/${slug}/changes/${b.body.change.id}/reject`).expect(200);
+    await request(app).post(`/api/sites/${slug}/changes/${b.body.change.id}/approve`).expect(409);
     expect((await request(app).get(`/api/sites/${slug}`)).body.draftVersion).toBe(1);
   });
 
@@ -98,9 +99,9 @@ describe("edit flow", () => {
 
   it("refuses an undo that would clobber a later edit to the same field", async () => {
     const first = await say("make the wings $15").expect(200);
-    await request(app).post(`/api/changes/${first.body.change.id}/approve`).expect(200);
+    await request(app).post(`/api/sites/${slug}/changes/${first.body.change.id}/approve`).expect(200);
     const second = await say("make the wings $16").expect(200);
-    await request(app).post(`/api/changes/${second.body.change.id}/approve`).expect(200);
+    await request(app).post(`/api/sites/${slug}/changes/${second.body.change.id}/approve`).expect(200);
     const r = await request(app).post(`/api/sites/${slug}/undo`).send({ changeId: first.body.change.id }).expect(409);
     expect(r.body.error).toMatch(/later edit/);
   });
@@ -109,7 +110,7 @@ describe("edit flow", () => {
     const a = await say("hide the wings").expect(200);
     // simulate another writer bumping the draft
     await db.collection("sites").updateOne({ _id: slug as never }, { $inc: { draftVersion: 1 } });
-    await request(app).post(`/api/changes/${a.body.change.id}/approve`).expect(409);
+    await request(app).post(`/api/sites/${slug}/changes/${a.body.change.id}/approve`).expect(409);
   });
 
   it("auto-approves low-risk edits when enabled, but never prices or allergens", async () => {
@@ -123,17 +124,23 @@ describe("edit flow", () => {
   it("falls back to the LLM only on a parser miss, logs tokens and cost, and caches", async () => {
     llmReply.content = JSON.stringify({ commands: [{ cmd: "set_price", itemId: "smash-burger", price: 1400 }] });
     const r = await say("knock a buck off the smash burger").expect(200);
-    expect(r.body.change).toMatchObject({ source: "llm", risk: "high", usage: { inputTokens: 700, cachedInputTokens: 512, outputTokens: 30 } });
+    expect(r.body.change).toMatchObject({ source: "llm", risk: "high", credits: 1 });
+    expect(r.body.change.usage).toBeUndefined(); // tokens and $ stay server-side
+    expect(await db.collection("llm_calls").findOne({})).toMatchObject({ credits: 1, account: slug, usage: { inputTokens: 700, cachedInputTokens: 512, outputTokens: 30 } });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
-    await request(app).post(`/api/changes/${r.body.change.id}/reject`);
+    await request(app).post(`/api/sites/${slug}/changes/${r.body.change.id}/reject`);
 
     const again = await say("Knock a buck off the smash burger!").expect(200);
     expect(again.body.change.source).toBe("llm-cache");
     expect(fetchImpl).toHaveBeenCalledTimes(1);
 
-    const usage = (await request(app).get(`/api/sites/${slug}`)).body.usage;
-    expect(usage).toMatchObject({ llmCalls: 1, inputTokens: 700, outputTokens: 30, changesBySource: { parser: 0, llm: 1, "llm-cache": 1 } });
-    expect(usage.estimatedCostUsd).toBeCloseTo((188 * 1.25 + 512 * 0.2 + 30 * 2.5) / 1e6, 6);
+    expect(again.body.change.credits).toBe(0);
+    const s = (await request(app).get(`/api/sites/${slug}`)).body;
+    expect(s.activity).toEqual({ parser: 0, ai: 1, aiCache: 1 });
+    expect(s.credits).toEqual({ balance: 99, perAiCall: 1 });
+    const m = await service.margin();
+    expect(m.total).toMatchObject({ calls: 1, creditsCharged: 1, inputTokens: 700, outputTokens: 30, cacheHits: 1 });
+    expect(m.total.costUsd).toBeCloseTo((188 * 1.25 + 512 * 0.2 + 30 * 2.5) / 1e6, 6);
   });
 
   it("never applies LLM output that fails validation", async () => {
@@ -157,12 +164,12 @@ describe("edit flow", () => {
     await request(app).post(`/api/sites/${slug}/publish`).expect(409);
     await say("").expect(400);
     await request(app).get(`/api/sites/nope`).expect(404);
-    await request(app).post(`/api/changes/zzz/approve`).expect(400);
+    await request(app).post(`/api/sites/${slug}/changes/zzz/approve`).expect(400);
   });
 
   it("resets the demo site", async () => {
     const a = await say("hide the wings");
-    await request(app).post(`/api/changes/${a.body.change.id}/approve`);
+    await request(app).post(`/api/sites/${slug}/changes/${a.body.change.id}/approve`);
     await request(app).post(`/api/sites/${slug}/reset`).expect(200);
     const s = await request(app).get(`/api/sites/${slug}`);
     expect(s.body.draftVersion).toBe(1);

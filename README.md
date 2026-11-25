@@ -4,9 +4,11 @@
 
 A fast, static restaurant website generated from menu JSON (Astro + one React island for the cart), a **menu-quality checker** (deterministic rules, safe auto-fixes, an optional LLM pass for item copy), and a **voice-driven, owner-approved site editor**: say or type "86 the burrata" or "raise the margherita by a dollar", review the diff, approve, publish. TypeScript end to end, in an npm-workspaces monorepo: Astro, React, Next.js App Router, Node/Express, MongoDB.
 
+**Live static site:** https://restaurant-site-poc.pages.dev (Cloudflare Pages). The editor is deploy-ready for Vercel + MongoDB Atlas but not hosted yet; see [docs/deploy.md](docs/deploy.md).
+
 ![Voice editor demo](docs/demo.gif)
 
-*Demo, 35 s ([MP4](docs/demo.mp4)): a spoken price change → approve → "86 the burrata" → an off-grammar request handled by the LLM fallback → a clarifying question for an ambiguous name → reject → undo → publish, which rebuilds the static site. The speech in the recording is simulated: the script feeds fixed transcripts to the browser's speech-recognition API so the run is repeatable. Everything after the transcript is the real stack.*
+*Demo, 41 s ([MP4](docs/demo.mp4)), recorded in public-demo mode: a spoken price change → approve → "86 the burrata" → a request the parser doesn't know, handled by the AI fallback for 1 credit → a clarifying question for an ambiguous name → reject → undo → publish to the visitor's private preview → out of credits: the AI helper pauses, and built-in phrases still work. The speech in the recording is simulated: the script feeds fixed transcripts to the browser's speech-recognition API so the run is repeatable. Everything after the transcript is the real stack.*
 
 > **Sample data.** "Ember & Elm Kitchen" is a fictional restaurant. The address, phone and menu are made up, item "photos" are generated SVG illustrations, and checkout is disabled. The sample menu has problems seeded on purpose so the checker has something to find.
 
@@ -34,8 +36,10 @@ packages/
                   compile → reversible ops, undo
 apps/
   site/           Astro static site: / (home), /menu (menu + cart island), /admin/report
-  api/            Express + MongoDB: drafts, pending changes, approve/reject, undo, publish
-  admin/          Next.js App Router editor: live preview, push-to-talk, diff, history
+  api/            MongoDB service + framework-free router: drafts, pending changes, approve/reject,
+                  undo, publish, credits, demo sandboxes; runs under Express locally
+  admin/          Next.js App Router editor: live preview, push-to-talk, diff, history, credits;
+                  serves the API from a route handler (Vercel); /published, /dev (margin)
 data/
   sample-restaurant.menu.json   fictional sample menu (with seeded problems)
   menu-report.llm.json          saved report from one real LLM run (see below)
@@ -93,11 +97,13 @@ CLI options: `--json <file>` (full report), `--fix <file>` (write the auto-fixed
 
 ### 4. Voice site editor (`packages/command-engine`, `apps/api`, `apps/admin`)
 
-| Pending price change (needs approval) | LLM fallback, with its token cost |
+| Pending price change (needs approval) | AI fallback: 1 credit |
 |---|---|
-| ![Pending change](docs/editor-pending-price.png) | ![LLM fallback](docs/editor-llm-fallback.png) |
-| **Ambiguous name: it asks instead of guessing** | **History with undo, after publish** |
-| ![Clarify](docs/editor-clarify.png) | ![History](docs/editor-history.png) |
+| ![Pending change](docs/editor-pending-price.png) | ![AI fallback](docs/editor-llm-fallback.png) |
+| **Ambiguous name: it asks instead of guessing** | **Out of credits: AI paused, parser still works** |
+| ![Clarify](docs/editor-clarify.png) | ![Credits paused](docs/editor-credits-paused.png) |
+| **History with undo** | **Internal margin view (`/dev`)** |
+| ![History](docs/editor-history.png) | ![Margin](docs/dev-margin.png) |
 
 An owner holds the mic button (or types), says what they want changed, and sees the change highlighted in a live preview plus a field-by-field diff. Nothing reaches the public site until they approve the change and publish.
 
@@ -110,15 +116,17 @@ flowchart LR
     HIST["History + Undo"]
   end
   TXT -->|"POST /commands"| API
-  subgraph Server["API (Node + Express + TypeScript)"]
-    API["EditService"] --> P["Deterministic parser<br/>+ fuzzy matcher ($0)"]
+  subgraph Server["API (TypeScript router: Express locally, Next.js route handler on Vercel)"]
+    API["EditService"] --> P["Deterministic parser<br/>+ fuzzy matcher (free)"]
     P -->|"no match"| C{"LLM cache<br/>(normalized utterance)"}
-    C -->|"miss"| LLM["xAI chat completions<br/>compact catalog, JSON only"]
+    C -->|"miss"| G{"Gate: daily $ cap,<br/>rate limits, 1 credit"}
+    G -->|"ok"| LLM["xAI chat completions<br/>compact catalog, JSON only"]
+    G -->|"blocked"| PAUSE["AI paused message<br/>(parser still works)"]
     P --> ENG
     C -->|"hit"| ENG
     LLM --> ENG["Command engine<br/>zod → compile → ops → parseMenu → checker"]
   end
-  ENG --> DB[("MongoDB<br/>sites · changes · events<br/>llm_cache · llm_calls")]
+  ENG --> DB[("MongoDB<br/>sites (+credits, sandboxes) · changes · events<br/>llm_cache · llm_calls · counters")]
   DB --> PV & CARD & HIST
   CARD -->|"approve"| DB
   HIST -->|"publish"| PUB["Write published menu JSON"] --> ASTRO["Astro build"] --> SITE["Static site"]
@@ -150,7 +158,7 @@ How it fits together:
 
 #### Token budget (measured)
 
-The model is only a fallback, and its calls are kept small: a compact catalog (`id=Name` pairs, no descriptions or prices), one-line command signatures, JSON-only output, `temperature: 0`, `max_tokens: 220`, and a MongoDB cache keyed by a hash of model + catalog + normalized utterance (30-day TTL). Every model call is logged with its token counts and cost, and the admin bar shows a running estimate.
+The model is only a fallback, and its calls are kept small: a compact catalog (`id=Name` pairs, no descriptions or prices), one-line command signatures, JSON-only output, `temperature: 0`, `max_tokens: 220`, and a MongoDB cache keyed by a hash of model + catalog + normalized utterance (30-day TTL). Every model call is logged server-side with its token counts and dollar cost; owners only ever see credits (below).
 
 `npm run measure:tokens` runs a corpus of 21 realistic requests twice. Measured on Nov 24, 2026 against xAI `grok-4.20-0309-non-reasoning` at list prices ($1.25 / 1M input, $0.20 / 1M cached input, $2.50 / 1M output); raw data in [`docs/token-costs.json`](docs/token-costs.json):
 
@@ -162,6 +170,23 @@ The model is only a fallback, and its calls are kept small: a compact catalog (`
 - About 710 input and 12–45 output tokens per model call, roughly **$0.0007 per call**, at 0.5–0.7 s. When the provider's prompt cache hits most of the system prompt (640 of 710 tokens, as in the demo recording), a call costs about $0.0003.
 - That works out to roughly 1,400 off-grammar commands per dollar before the utterance cache. Undo, approve, reject and publish never call the model.
 - All six model results in the corpus were correct: four edits, one correctly skipped ("the market greens are gluten free and vegan": already tagged), and one refusal (the banner request).
+
+### 5. Credits and the public demo
+
+**Credits.** Each restaurant (and, in demo mode, each visitor's sandbox) has a credit balance in MongoDB, `CREDITS_DEFAULT` (100) to start. Built-in phrases the parser understands are free, and so are AI answers reused from the cache. A request that needs a real model call costs 1 credit. The top bar shows "N credits left", never dollars. At 0 the AI fallback pauses with a friendly message ("You're out of AI credits… built-in phrases still work") and no model call is made; parser commands keep working. Credits are taken atomically (`$gte: 1` + `$inc: -1`) before the call and refunded if the call fails. Resetting the demo restores the menu but not the credits.
+
+**Margin, internally.** Each real call is logged with its input, cached and output tokens and its dollar cost at list price. `GET /api/admin/margin` (with `x-admin-token`) and the `/dev` page compare that with what the credits would bill at `CREDIT_PRICE_USD` ($0.01 by default), per UTC day and per restaurant. The screenshot above is real: two calls from the demo recording cost $0.00054 in total ($0.00027 each, with 640 of 710 prompt tokens cached by the provider), against $0.02 of credits.
+
+**Public demo safeguards (`DEMO_MODE=1`):**
+
+- **A sandbox per visitor.** An HttpOnly session cookie maps each visitor to a private copy of the menu. Every request bumps its `expiresAt`, and a MongoDB TTL index deletes it after `SANDBOX_IDLE_MINUTES` (60) of inactivity. Change ids are checked against the sandbox, so one visitor can't approve another's change.
+- **Rate limits on model calls** per session and per IP (hashed), in hourly windows stored in a TTL'd `counters` collection (defaults 20 and 60 per hour).
+- **A global daily xAI spend cap** (`LLM_DAILY_CAP_USD`, default $0.50), metered from the provider's reported token usage. Once it's hit, the AI fallback is off for everyone until the next UTC day.
+- **Publish goes to a private preview.** A visitor's publish never touches the public site. On serverless there's no per-request Astro build, so `/published` renders the sandbox's published menu with the same data, the same safe auto-fixes and the admin's React preview components. It's an honest stand-in for the static page, not the Astro output itself.
+
+All of this is covered by tests against a real MongoDB (`apps/api/test/credits-demo.test.ts`): credit charging and refunds, pausing at 0, cache hits free, margin math, sandbox isolation and expiry, preview-only publish, per-session and per-IP limits, and the daily cap rolling over at UTC midnight.
+
+**One API, two hosts.** Routes, validation, sessions and demo rules live in a framework-free router (`apps/api/src/router.ts`). Express adapts to it locally; on Vercel a single Next.js catch-all route handler (`apps/admin/app/api/[...path]/route.ts`) does, reusing a warm MongoDB connection pool between invocations. Set `API_URL` and the admin proxies to Express instead. Deploy steps: [docs/deploy.md](docs/deploy.md).
 
 ## Performance (measured)
 
@@ -177,6 +202,8 @@ Lighthouse 13.6.0 on Chrome 156 (headless), run locally against the production b
 Caveats: this is a lab test on localhost, with no CDN and no network latency, a small sample menu, SVG placeholder images, and none of the third-party analytics tags a real restaurant site carries. Owner's 5.4s → 0.7s numbers are p75 field data across real traffic; these are not comparable to that, they only show the architecture starts fast. The home page ships no JavaScript. On `/menu`, the cart island is about 8 KB of app code plus React's runtime, loaded at idle.
 
 Reproduce: `npm run build && npm run lighthouse` (needs Chrome installed). These numbers were measured before the editor work added `data-edit-id` attributes to the pages.
+
+**Deployed (Cloudflare Pages).** The same Lighthouse run against https://restaurant-site-poc.pages.dev over the real network (from the build machine, Nov 24, 2026; raw: [`docs/lighthouse-live.json`](docs/lighthouse-live.json)) scored 100 in all four categories on `/` and `/menu`, in both modes: LCP 0.9 s on mobile and 0.2 s on desktop, CLS 0, TBT 0–40 ms; 7 KiB transferred for `/` and 91 KiB for `/menu`. It's still one lab run from one location, not field data.
 
 ## Run it
 
@@ -199,26 +226,28 @@ OPENAI_API_KEY=... OPENAI_BASE_URL=https://api.openai.com/v1 OPENAI_MODEL=gpt-4o
 **The editor** needs MongoDB on `localhost:27017`. Docker isn't required; any local `mongod` works (for example the tarball from mongodb.com: `mongod --dbpath ./mongo-data`). The API test suite also uses it (each run gets its own throwaway database); set `MONGO_URL` to point elsewhere.
 
 ```bash
-# terminal 1: API on :4000 (seeds the sample restaurant on first run)
-PUBLISH_BUILD=1 npm run dev:api          # optional: XAI_API_KEY=... for the LLM fallback
-# terminal 2: admin on :3000 (proxies /api to the API)
-npm run dev:admin
-# terminal 3: the static site on :4321, rebuilt by Publish
-npm run preview -w @restaurant-site-poc/site
+# Simplest: the admin serves the API itself (as on Vercel). http://localhost:3000
+npm run dev:admin                        # optional: XAI_API_KEY=... for the AI fallback
+npm run dev:admin:demo                   # the same, in public-demo mode (sandboxes, limits, preview-only publish)
+
+# Full local loop with an Astro rebuild on publish:
+PUBLISH_BUILD=1 npm run dev:api          # terminal 1: Express API on :4000
+API_URL=http://localhost:4000 npm run dev:admin   # terminal 2: admin, proxying /api to Express
+npm run preview -w @restaurant-site-poc/site      # terminal 3: the static site on :4321
 ```
 
-Without an API key the editor runs on the parser alone and tells you when it didn't understand. `npm run demo:record` re-records the demo video and screenshots against a running stack (needs Chrome).
+Without an API key the editor runs on the parser alone and tells you when it didn't understand. `ADMIN_TOKEN=… npm run demo:record` re-records the demo video and screenshots against a running admin (needs Chrome). All settings are listed in [`.env.example`](.env.example).
 
 **Two-minute demo script**
 
 1. Open http://localhost:3000. The blue frame and bar mean you're editing a draft; the public site is unchanged.
 2. Hold **Hold to talk** and say "Change the price of the margarita to $16.50". The price is highlighted in the preview, and the card shows $15.00 → $16.50 with "Needs approval". Approve.
 3. Type "86 the burrata". It's hidden in the preview (dimmed, flagged). Approve.
-4. Type "knock a dollar off the smash burger". The parser misses it, so the LLM fallback answers in under a second; the card shows its token count and cost. Approve.
+4. Type "knock a dollar off the smash burger". The parser misses it, so the AI fallback answers in under a second; the card says "AI helper · 1 credit" and the top bar drops to 99 credits left. Approve.
 5. Type "hide the caesar salad". There are two Caesar salads, so it asks which one. Pick one, then Reject it.
-6. In the history, Undo the burrata change. Then press **Publish**, open the published site and see $16.50 on the menu.
+6. In the history, Undo the burrata change. Then press **Publish**, open the published site (or, in demo mode, your published preview) and see $16.50 on the menu.
 
-CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB service container for the API tests) → `check-menu` (deterministic only) → build the site → build the admin, and uploads the built site as an artifact. CI never calls an LLM (model calls are mocked in tests). Nothing is deployed.
+CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB service container for the API tests) → `check-menu` (deterministic only) → build the site → build the admin, and uploads the built site as an artifact. CI never calls an LLM (model calls are mocked in tests). CI doesn't deploy: the Cloudflare Pages deploy is a manual `npm run deploy:pages`.
 
 ## Design decisions and trade-offs
 
@@ -235,9 +264,9 @@ CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB
 
 ### Not built (yet)
 
-A server-side checkout endpoint; deploying to Cloudflare Pages or Workers with edge caching; photo-quality checks (resolution, blur); per-location menus and hours exceptions; running the checker across many menus in batch; auth and multi-user roles for the editor; adding new items or modifier groups by voice; per-page revalidation instead of a full rebuild on publish.
+A server-side checkout endpoint; per-restaurant edge caching and revalidation with Workers; sign-in for the editor (outside demo mode it has no auth, so it's for local use only); photo-quality checks (resolution, blur); per-location menus and hours exceptions; running the checker across many menus in batch; auth and multi-user roles for the editor; adding new items or modifier groups by voice; per-page revalidation instead of a full rebuild on publish.
 
-A free public demo would be possible (the static site on a free static host, and the editor in parser-only mode), but it isn't deployed.
+The static site is deployed on Cloudflare Pages. The editor is ready for a free public deploy (Vercel Hobby + Atlas M0, with demo mode's sandboxes, rate limits and spend cap), but isn't hosted yet; [docs/deploy.md](docs/deploy.md) has the steps.
 
 ## How this was built
 

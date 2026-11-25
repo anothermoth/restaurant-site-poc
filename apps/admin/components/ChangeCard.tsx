@@ -48,7 +48,7 @@ export function ChangeCard({ change, onApprove, onReject, busy }: { change: Chan
           ))}
         </div>
       )}
-      <p className="muted small">{costLine(change.source, change.usage)}</p>
+      <p className="muted small">{costLine(change.source, change.credits)}</p>
       <div className="actions">
         <button type="button" className="btn btn-primary" onClick={onApprove} disabled={busy}>
           Approve

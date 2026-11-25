@@ -102,13 +102,25 @@ export type FallbackResult =
 export async function llmFallback(
   utterance: string,
   menu: Menu,
-  opts: { config: LlmConfig | null; cache: CacheStore; fetchImpl?: FetchLike; now?: () => number },
+  opts: {
+    config: LlmConfig | null;
+    cache: CacheStore;
+    fetchImpl?: FetchLike;
+    now?: () => number;
+    /**
+     * Runs after a cache miss, right before a paid model call. Return a reason to
+     * block the call (out of credits, rate limit, spend cap), or null to allow it.
+     */
+    beforeCall?: () => Promise<string | null>;
+  },
 ): Promise<FallbackResult> {
   if (!opts.config) return { source: "unavailable", reason: "I only understood the built-in phrases, and the AI fallback is off (no API key)." };
   const { config, cache } = opts;
   const key = cacheKey(utterance, menu, config.model);
   const hit = await cache.get(key);
   if (hit) return { source: "llm-cache", reply: hit, usage: null };
+  const blocked = opts.beforeCall ? await opts.beforeCall() : null;
+  if (blocked) return { source: "unavailable", reason: blocked };
 
   const now = opts.now ?? Date.now;
   const started = now();
