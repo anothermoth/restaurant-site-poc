@@ -354,7 +354,7 @@
           "price": 1500,
           "photo": {
             "src": "/photos/smash-burger.jpg",
-            "alt": "Double cheeseburger on a sesame bun",
+            "alt": "Double cheeseburger with melted cheese and sauce on a sesame bun",
             "width": 1400,
             "height": 933
           },
@@ -431,6 +431,7 @@
           "name": "caesar salad",
           "description": "Romaine, croutons, parmesan.",
           "price": 1100,
+          "available": false,
           "dietaryTags": [
             "contains-dairy",
             "contains-gluten"

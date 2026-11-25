@@ -5,7 +5,7 @@ import serifUrl from "@fontsource/instrument-serif/files/instrument-serif-latin-
 import serifItalicUrl from "@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url";
 import { serializeJsonLd } from "../lib/jsonld.ts";
 import { menu } from "../lib/data.ts";
-import { clock, dayRange } from "../lib/hours.ts";
+import { clock, closedDays, dayRange } from "../lib/hours.ts";
 
 interface Props {
   title: string;
@@ -15,11 +15,14 @@ interface Props {
   ogImage?: string;
   /** "overlay" puts a transparent header over a full-bleed hero photo. */
   header?: "overlay" | "solid";
+  /** Address, phone and hours in the footer. Off on the home page, whose Visit section shows them just above. */
+  footerContact?: boolean;
 }
-const { title, description, jsonLd, noindex = false, ogImage, header = "solid" } = Astro.props;
+const { title, description, jsonLd, noindex = false, ogImage, header = "solid", footerContact = true } = Astro.props;
 const r = menu.restaurant;
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 const image = ogImage ? new URL(ogImage, Astro.site).toString() : undefined;
+const closed = closedDays(r.hours);
 const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 // Set EDITOR_URL at build time to link the public demo editor from the footer.
 const editorUrl = process.env.EDITOR_URL;
@@ -68,34 +71,27 @@ const fontFaces = `
       <slot />
     </main>
     <footer class="site-foot">
-      <div class="wrap foot-grid">
-        <div class="foot-brand">
-          <a class="brand" href="/">{r.name}</a>
-          {r.tagline && <p>{r.tagline}</p>}
-        </div>
-        <div>
-          <h2 class="foot-h">Visit</h2>
-          <address>
-            {r.address.street}<br />{r.address.city}, {r.address.region} {r.address.postalCode}<br />
-            {r.phone && <a href={`tel:${r.phone}`}>{r.phone}</a>}
-          </address>
-        </div>
-        <div>
-          <h2 class="foot-h">Hours</h2>
-          <ul class="foot-list">
-            {r.hours.map((h) => <li>{dayRange(h.days)} · {clock(h.opens)}–{clock(h.closes)}</li>)}
-          </ul>
-        </div>
-        <div>
-          <h2 class="foot-h">Explore</h2>
-          <ul class="foot-list">
-            <li><a href="/menu">Menu &amp; ordering</a></li>
-            <li><a href="/admin/report" aria-current={path === "/admin/report" ? "page" : undefined}>Menu report</a></li>
-            <li><a href="/credits">Photo credits</a></li>
-            {editorUrl && <li><a href={editorUrl} rel="noopener">Owner's editor demo</a></li>}
-          </ul>
-        </div>
+      <div class="wrap foot-main">
+        <a class="brand" href="/">{r.name}</a>
+        <ul class="foot-nav" aria-label="Site">
+          <li><a href="/menu">Menu &amp; ordering</a></li>
+          <li><a href="/admin/report" aria-current={path === "/admin/report" ? "page" : undefined}>Menu report</a></li>
+          <li><a href="/credits">Photo credits</a></li>
+          {editorUrl && <li><a href={editorUrl} rel="noopener">Owner's editor demo</a></li>}
+        </ul>
       </div>
+      {footerContact && (
+        <div class="wrap foot-contact">
+          <address>
+            <span class="nowrap">{r.address.street},</span> <span class="nowrap">{r.address.city}, {r.address.region} {r.address.postalCode}</span>
+            {r.phone && <> · <a class="nowrap" href={`tel:${r.phone}`}>{r.phone}</a></>}
+          </address>
+          <p>
+            {r.hours.map((h, n) => <>{n > 0 && " · "}<span class="nowrap">{dayRange(h.days)} {clock(h.opens)}–{clock(h.closes)}</span></>)}
+            {closed.length > 0 && <> · <span class="nowrap">Closed {dayRange(closed)}</span></>}
+          </p>
+        </div>
+      )}
       <div class="wrap foot-fine">
         {r.isSampleData && (
           <p role="note">

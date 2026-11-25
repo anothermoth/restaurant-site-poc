@@ -155,8 +155,9 @@ describe("edit flow", () => {
   it("returns clarify with options that resolve by id", async () => {
     const r = await say("hide the caesar salad").expect(200);
     expect(r.body.type).toBe("clarify");
-    const pick = r.body.options.find((o: { utterance: string }) => o.utterance.endsWith("caesar-2"));
-    expect((await say(pick.utterance)).body.change.commands).toEqual([{ cmd: "hide_item", itemId: "caesar-2" }]);
+    // caesar-2 is the sample menu's planted duplicate; it ships hidden, so pick the visible one.
+    const pick = r.body.options.find((o: { utterance: string }) => o.utterance.endsWith(" caesar"));
+    expect((await say(pick.utterance)).body.change.commands).toEqual([{ cmd: "hide_item", itemId: "caesar" }]);
   });
 
   it("blocks publish while a change is pending, and validates input", async () => {

@@ -16,7 +16,7 @@ Deploy steps: [docs/deploy.md](docs/deploy.md).
 
 *Demo, 45 s ([MP4](docs/demo.mp4)), recorded in public-demo mode: a spoken price change → approve → click the burrata in the menu panel and type "86 it" → a request the parser doesn't know, handled by the AI fallback for 1 credit → a clarifying question for an ambiguous name → reject → undo → publish to the visitor's private preview → out of credits: the AI helper pauses, and built-in phrases still work. The speech in the recording is simulated: the script feeds fixed transcripts to the browser's speech-recognition API so the run is repeatable. Everything after the transcript is the real stack.*
 
-> **Sample data.** "Ember & Elm Kitchen" is a fictional restaurant. The address, phone and menu are made up, and checkout is disabled. The food photos are real, free-licensed photography from Pexels, used for illustration (credits and license in [CREDITS.md](CREDITS.md); the photos are not covered by the MIT license). The sample menu has problems seeded on purpose so the checker has something to find.
+> **Sample data.** "Ember & Elm Kitchen" is a fictional restaurant. The address, phone and menu are made up, and checkout is disabled. The food photos are real, free-licensed photography from Pexels, used for illustration (credits and license in [CREDITS.md](CREDITS.md); the photos are not covered by the MIT license). The sample menu has problems seeded on purpose so the checker has something to find. One of them is a second "caesar salad" (`caesar-2`): it stays in the data so the checker flags the duplicate and the editor can ask "which one?", but it ships hidden, so guests see one Caesar Salad.
 
 ![Menu quality report](docs/screenshot-report.png)
 
