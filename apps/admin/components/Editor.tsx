@@ -15,7 +15,7 @@ type Reply = { tone: "info" | "error" | "ok" | "warn"; text: string; detail?: st
  * Three starter ideas in the owner's own words (all handled by the built-in phrases,
  * so they never use an AI credit). With an item selected they switch to short forms.
  */
-export const SUGGESTIONS = ["We're out of the burrata", "The margherita is now $16.50", "We're closed on Mondays"];
+export const SUGGESTIONS = ["We're out of the burrata", "The margherita is now $16.50", "We're closed on Sundays"];
 export const SELECTED_SUGGESTIONS = ["Make it $", "We're out of this", "Rename it to "];
 
 const editIdOf = (t: EditTarget | null) => (t ? (t.kind === "item" ? `item:${t.id}` : `category:${t.id}`) : undefined);
