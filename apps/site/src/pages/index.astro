@@ -1,0 +1,65 @@
+---
+import Base from "../layouts/Base.astro";
+import { menu } from "../lib/data.ts";
+import { priceText, restaurantJsonLd } from "../lib/jsonld.ts";
+
+const r = menu.restaurant;
+const site = Astro.site!.toString();
+const featuredIds = ["margherita", "hot-honey-pepperoni", "smash-burger"];
+const featured = menu.categories.flatMap((c) => c.items).filter((i) => featuredIds.includes(i.id));
+const DAY: Record<string, string> = { Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat", Su: "Sun" };
+const description = `${r.name}: ${r.cuisine.join(" & ")} in ${r.address.city}, ${r.address.region}. See the menu and order online.`;
+---
+<Base title={`${r.name} | ${r.cuisine.join(" & ")} in ${r.address.city}`} description={description} jsonLd={restaurantJsonLd(menu, site)} ogImage={r.heroPhoto?.src}>
+  <section class="hero">
+    {r.heroPhoto && (
+      <img class="hero-img" src={r.heroPhoto.src} alt={r.heroPhoto.alt} width={r.heroPhoto.width} height={r.heroPhoto.height} fetchpriority="high" decoding="async" />
+    )}
+    <div class="hero-text wrap">
+      <h1>{r.name}</h1>
+      {r.tagline && <p class="lede">{r.tagline}</p>}
+      <div class="cta-row">
+        <a class="btn btn-primary" href="/menu">View menu &amp; order</a>
+        {r.phone && <a class="btn btn-ghost" href={`tel:${r.phone}`}>Call</a>}
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <h2>Guest favorites</h2>
+    <ul class="grid">
+      {featured.map((i) => (
+        <li class="card">
+          {i.photo && <img src={i.photo.src} alt={i.photo.alt} width={i.photo.width} height={i.photo.height} loading="lazy" decoding="async" />}
+          <div class="card-body">
+            <h3>{i.name}</h3>
+            <p class="muted">{i.description}</p>
+            <p class="price">{priceText(i.price, menu.currency)}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="wrap section two-col">
+    <div>
+      <h2>Hours</h2>
+      <dl class="hours">
+        {r.hours.map((h) => (
+          <>
+            <dt>{h.days.map((d) => DAY[d]).join(", ")}</dt>
+            <dd>{h.opens} – {h.closes}</dd>
+          </>
+        ))}
+        <dt>Mon</dt><dd>Closed</dd>
+      </dl>
+    </div>
+    <div>
+      <h2>Find us</h2>
+      <address>
+        {r.address.street}<br />{r.address.city}, {r.address.region} {r.address.postalCode}<br />
+        {r.phone && <a href={`tel:${r.phone}`}>{r.phone}</a>}
+      </address>
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,68 @@
+{
+  "tool": "Lighthouse 13.6.0",
+  "browser": "Google Chrome 156.0.8078.47 (headless)",
+  "target": "astro preview (localhost:4321), production build",
+  "measuredAt": "2026-11-24 (America/Chicago)",
+  "runs": {
+    "home-mobile": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100,
+      "agentic-browsing": 100,
+      "LCP": "0.9\u00a0s",
+      "FCP": "0.6\u00a0s",
+      "TBT": "20\u00a0ms",
+      "CLS": "0",
+      "SpeedIndex": "0.6\u00a0s",
+      "transferSize": "Total size was 9\u00a0KiB",
+      "throttling": "simulate",
+      "formFactor": "mobile"
+    },
+    "home-desktop": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100,
+      "agentic-browsing": 100,
+      "LCP": "0.2\u00a0s",
+      "FCP": "0.2\u00a0s",
+      "TBT": "0\u00a0ms",
+      "CLS": "0",
+      "SpeedIndex": "0.2\u00a0s",
+      "transferSize": "Total size was 9\u00a0KiB",
+      "throttling": "simulate",
+      "formFactor": "desktop"
+    },
+    "menu-mobile": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100,
+      "agentic-browsing": 100,
+      "LCP": "0.7\u00a0s",
+      "FCP": "0.7\u00a0s",
+      "TBT": "0\u00a0ms",
+      "CLS": "0",
+      "SpeedIndex": "0.7\u00a0s",
+      "transferSize": "Total size was 96\u00a0KiB",
+      "throttling": "simulate",
+      "formFactor": "mobile"
+    },
+    "menu-desktop": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100,
+      "agentic-browsing": 100,
+      "LCP": "0.2\u00a0s",
+      "FCP": "0.2\u00a0s",
+      "TBT": "0\u00a0ms",
+      "CLS": "0",
+      "SpeedIndex": "0.2\u00a0s",
+      "transferSize": "Total size was 96\u00a0KiB",
+      "throttling": "simulate",
+      "formFactor": "desktop"
+    }
+  }
+}

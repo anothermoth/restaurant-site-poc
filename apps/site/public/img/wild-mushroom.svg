@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" width="480" height="360" role="img" aria-label="Wild Mushroom">
+<rect width="480" height="360" fill="#f9d9c4"/>
+<ellipse cx="240" cy="180" rx="170" ry="120" fill="#fff" opacity=".9"/>
+<ellipse cx="240" cy="175" rx="120" ry="82" fill="#d9562b" opacity=".55"/><circle cx="243" cy="150" r="8" fill="#d9562b" opacity=".85"/><circle cx="273" cy="176" r="11" fill="#7a2414" opacity=".85"/><circle cx="241" cy="160" r="14" fill="#d9562b" opacity=".85"/><circle cx="239" cy="167" r="8" fill="#7a2414" opacity=".85"/><circle cx="240" cy="171" r="11" fill="#d9562b" opacity=".85"/><circle cx="229" cy="181" r="14" fill="#7a2414" opacity=".85"/><circle cx="241" cy="175" r="8" fill="#d9562b" opacity=".85"/>
+<text x="240" y="338" font-family="system-ui,sans-serif" font-size="18" text-anchor="middle" fill="#7a2414" opacity=".7">illustration: Wild Mushroom</text>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" width="480" height="360" role="img" aria-label="Double Smash Burger">
+<rect width="480" height="360" fill="#f4e1b5"/>
+<ellipse cx="240" cy="180" rx="170" ry="120" fill="#fff" opacity=".9"/>
+<ellipse cx="240" cy="175" rx="120" ry="82" fill="#c98a3b" opacity=".55"/><circle cx="201" cy="198" r="8" fill="#c98a3b" opacity=".85"/><circle cx="213" cy="198" r="11" fill="#5a3414" opacity=".85"/><circle cx="203" cy="187" r="14" fill="#c98a3b" opacity=".85"/><circle cx="198" cy="166" r="8" fill="#5a3414" opacity=".85"/><circle cx="218" cy="146" r="11" fill="#c98a3b" opacity=".85"/><circle cx="254" cy="144" r="14" fill="#5a3414" opacity=".85"/><circle cx="180" cy="181" r="8" fill="#c98a3b" opacity=".85"/>
+<text x="240" y="338" font-family="system-ui,sans-serif" font-size="18" text-anchor="middle" fill="#5a3414" opacity=".7">illustration: Double Smash Burger</text>
+</svg>

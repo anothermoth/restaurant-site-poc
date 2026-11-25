@@ -1,0 +1,486 @@
+{
+  "restaurant": {
+    "slug": "ember-and-elm",
+    "name": "Ember & Elm Kitchen",
+    "tagline": "Wood-fired pizza, smash burgers and seasonal plates. (Fictional sample restaurant.)",
+    "cuisine": [
+      "Pizza",
+      "American"
+    ],
+    "isSampleData": true,
+    "phone": "+1-555-010-0199",
+    "url": "https://example.com/ember-and-elm",
+    "priceRange": "$$",
+    "address": {
+      "street": "100 Sample Street",
+      "city": "Springfield",
+      "region": "MO",
+      "postalCode": "65800",
+      "country": "US"
+    },
+    "hours": [
+      {
+        "days": [
+          "Tu",
+          "We",
+          "Th"
+        ],
+        "opens": "11:00",
+        "closes": "21:00"
+      },
+      {
+        "days": [
+          "Fr",
+          "Sa"
+        ],
+        "opens": "11:00",
+        "closes": "22:00"
+      },
+      {
+        "days": [
+          "Su"
+        ],
+        "opens": "11:00",
+        "closes": "20:00"
+      }
+    ],
+    "brandColor": "#b4321f",
+    "heroPhoto": {
+      "src": "/img/hero.svg",
+      "alt": "Wood-fired oven with a pizza coming out",
+      "width": 1200,
+      "height": 600
+    }
+  },
+  "currency": "USD",
+  "modifierGroups": [
+    {
+      "id": "pizza-size",
+      "name": "Size",
+      "minSelect": 1,
+      "maxSelect": 1,
+      "options": [
+        {
+          "id": "size-12",
+          "name": "12 inch",
+          "priceDelta": 0
+        },
+        {
+          "id": "size-16",
+          "name": "16 inch",
+          "priceDelta": 600
+        }
+      ]
+    },
+    {
+      "id": "pizza-toppings",
+      "name": "Extra toppings",
+      "minSelect": 0,
+      "maxSelect": 5,
+      "options": [
+        {
+          "id": "top-mushroom",
+          "name": "Mushrooms",
+          "priceDelta": 150,
+          "dietaryTags": [
+            "vegan"
+          ]
+        },
+        {
+          "id": "top-pepperoni",
+          "name": "Pepperoni",
+          "priceDelta": 200
+        },
+        {
+          "id": "top-jalapeno",
+          "name": "Jalapeños",
+          "priceDelta": 100,
+          "dietaryTags": [
+            "vegan",
+            "spicy"
+          ]
+        },
+        {
+          "id": "top-burrata",
+          "name": "Burrata",
+          "priceDelta": 400,
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "burger-temp",
+      "name": "Cook temperature",
+      "minSelect": 1,
+      "maxSelect": 1,
+      "options": [
+        {
+          "id": "temp-mr",
+          "name": "Medium rare"
+        },
+        {
+          "id": "temp-m",
+          "name": "Medium"
+        },
+        {
+          "id": "temp-wd",
+          "name": "Well done"
+        }
+      ]
+    },
+    {
+      "id": "burger-addons",
+      "name": "Add-ons",
+      "minSelect": 0,
+      "maxSelect": 3,
+      "options": [
+        {
+          "id": "add-bacon",
+          "name": "Bacon",
+          "priceDelta": 250
+        },
+        {
+          "id": "add-egg",
+          "name": "Fried egg",
+          "priceDelta": 150,
+          "dietaryTags": [
+            "vegetarian"
+          ]
+        },
+        {
+          "id": "add-avocado",
+          "name": "Avocado",
+          "priceDelta": 200,
+          "dietaryTags": [
+            "vegan"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dressing",
+      "name": "Dressing",
+      "minSelect": 0,
+      "maxSelect": 1,
+      "options": []
+    }
+  ],
+  "categories": [
+    {
+      "id": "starters",
+      "name": "Starters",
+      "items": [
+        {
+          "id": "garlic-knots",
+          "name": "GARLIC KNOTS",
+          "description": "Six knots of our pizza dough, brushed with roasted garlic butter and parmesan, with marinara for dipping.",
+          "price": 700,
+          "photo": {
+            "src": "/img/garlic-knots.svg",
+            "alt": "GARLIC KNOTS",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy",
+            "contains-gluten"
+          ]
+        },
+        {
+          "id": "crispy-brussels",
+          "name": "Crispy Brussels Sprouts",
+          "description": "Flash-fried sprouts tossed in hot honey and lime, finished with toasted peanuts.",
+          "price": 950,
+          "photo": {
+            "src": "/img/crispy-brussels.svg",
+            "alt": "Crispy Brussels Sprouts",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-nuts",
+            "spicy"
+          ]
+        },
+        {
+          "id": "wings",
+          "name": "Wood-Fired Wings",
+          "description": "",
+          "price": 1400,
+          "dietaryTags": []
+        },
+        {
+          "id": "burrata",
+          "name": "Burrata & Heirloom Tomatoes",
+          "description": "Creamy burrata over heirloom tomatoes with basil oil, flaky salt and grilled sourdough.",
+          "price": 1300,
+          "photo": {
+            "src": "/img/burrata.svg",
+            "alt": "Burrata & Heirloom Tomatoes",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy",
+            "contains-gluten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pizza",
+      "name": "Wood-Fired Pizza",
+      "description": "12-inch pizzas, 16-inch available.",
+      "items": [
+        {
+          "id": "margherita",
+          "name": "Margherita",
+          "description": "San Marzano tomato, fresh mozzarella, basil and olive oil on a blistered, 48-hour fermented crust.",
+          "price": 1500,
+          "photo": {
+            "src": "/img/margherita.svg",
+            "alt": "Margherita",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "pizza-size",
+            "pizza-toppings"
+          ]
+        },
+        {
+          "id": "hot-honey-pepperoni",
+          "name": "Hot Honey Pepperoni",
+          "description": "Cup-and-char pepperoni, mozzarella, Calabrian chili and a drizzle of hot honey.",
+          "price": 1800,
+          "photo": {
+            "src": "/img/hot-honey-pepperoni.svg",
+            "alt": "Hot Honey Pepperoni",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "spicy",
+            "contains-dairy",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "pizza-size",
+            "pizza-toppings"
+          ]
+        },
+        {
+          "id": "wild-mushroom",
+          "name": "Wild Mushroom",
+          "description": "Roasted mushrooms, fontina, thyme and garlic confit, no tomato sauce.",
+          "price": 1900,
+          "photo": {
+            "src": "/img/wild-mushroom.svg",
+            "alt": "Wild Mushroom",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "pizza-size",
+            "pizza-toppings"
+          ]
+        },
+        {
+          "id": "sausage-fennel",
+          "name": "sausage & fennel",
+          "description": "House fennel sausage, red onion, mozzarella and tomato.",
+          "price": 1850,
+          "dietaryTags": [
+            "contains-dairy",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "pizza-size",
+            "pizza-toppings"
+          ]
+        },
+        {
+          "id": "truffle-pie",
+          "name": "Truffle Pie",
+          "description": "Truffle cream, mozzarella, arugula and shaved parmesan.",
+          "price": 18500,
+          "photo": {
+            "src": "/img/truffle-pie.svg",
+            "alt": "Truffle Pie",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "pizza-size"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "burgers",
+      "name": "Burgers & Sandwiches",
+      "items": [
+        {
+          "id": "smash-burger",
+          "name": "Double Smash Burger",
+          "description": "Two smashed beef patties, American cheese, pickles, onions and house sauce on a potato bun.",
+          "price": 1500,
+          "photo": {
+            "src": "/img/smash-burger.svg",
+            "alt": "Double Smash Burger",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "contains-dairy",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "burger-temp",
+            "burger-addons"
+          ]
+        },
+        {
+          "id": "chicken-sandwich",
+          "name": "Crispy Chicken Sandwich",
+          "description": "Buttermilk-fried chicken thigh, slaw and dill pickles on a toasted bun.",
+          "price": 1450,
+          "photo": {
+            "src": "/img/chicken-sandwich.svg",
+            "alt": "Crispy Chicken Sandwich",
+            "width": 480,
+            "height": 360
+          },
+          "modifierGroupIds": [
+            "burger-addons"
+          ]
+        },
+        {
+          "id": "veggie-burger",
+          "name": "Black Bean Burger",
+          "description": "Black bean and roasted corn patty, avocado, pickled onion and chipotle mayo.",
+          "price": 1350,
+          "photo": {
+            "src": "/img/veggie-burger.svg",
+            "alt": "Black Bean Burger",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "burger-addons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "salads",
+      "name": "Salads",
+      "items": [
+        {
+          "id": "caesar",
+          "name": "Caesar Salad",
+          "description": "Little gem lettuce, garlic croutons, parmesan and anchovy dressing.",
+          "price": 1100,
+          "photo": {
+            "src": "/img/caesar.svg",
+            "alt": "Caesar Salad",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "contains-dairy",
+            "contains-gluten"
+          ],
+          "modifierGroupIds": [
+            "dressing"
+          ]
+        },
+        {
+          "id": "caesar-2",
+          "name": "caesar salad",
+          "description": "Romaine, croutons, parmesan.",
+          "price": 1100,
+          "dietaryTags": [
+            "contains-dairy",
+            "contains-gluten"
+          ]
+        },
+        {
+          "id": "market-greens",
+          "name": "Market Greens",
+          "description": "Mixed greens, shaved radish, citrus and sunflower seeds with a lemon vinaigrette.",
+          "price": 950,
+          "photo": {
+            "src": "/img/market-greens.svg",
+            "alt": "Market Greens",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegan",
+            "gluten-free"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desserts",
+      "name": "Desserts",
+      "items": [
+        {
+          "id": "skillet-cookie",
+          "name": "Skillet Cookie",
+          "description": "Warm brown-butter chocolate chip cookie baked in cast iron, topped with vanilla gelato.",
+          "price": 900,
+          "photo": {
+            "src": "/img/skillet-cookie.svg",
+            "alt": "Skillet Cookie",
+            "width": 480,
+            "height": 360
+          },
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy",
+            "contains-gluten"
+          ]
+        },
+        {
+          "id": "tiramisu",
+          "name": "Tiramisu",
+          "description": "Espresso-soaked ladyfingers and mascarpone cream.",
+          "price": 850,
+          "dietaryTags": [
+            "vegetarian",
+            "contains-dairy",
+            "contains-gluten"
+          ]
+        }
+      ]
+    }
+  ]
+}

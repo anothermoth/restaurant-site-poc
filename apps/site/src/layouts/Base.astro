@@ -1,0 +1,66 @@
+---
+import "../styles/global.css";
+import { serializeJsonLd } from "../lib/jsonld.ts";
+import { menu } from "../lib/data.ts";
+
+interface Props {
+  title: string;
+  description: string;
+  jsonLd?: unknown;
+  noindex?: boolean;
+  ogImage?: string;
+}
+const { title, description, jsonLd, noindex = false, ogImage } = Astro.props;
+const r = menu.restaurant;
+const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+const image = ogImage ? new URL(ogImage, Astro.site).toString() : undefined;
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+---
+<!doctype html>
+<html lang="en" style={`--brand:${r.brandColor}`}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta name="theme-color" content={r.brandColor} />
+    <meta property="og:type" content="restaurant.restaurant" />
+    <meta property="og:site_name" content={r.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {jsonLd && <script type="application/ld+json" set:html={serializeJsonLd(jsonLd)} />}
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    {r.isSampleData && (
+      <div class="sample-banner" role="note">
+        Sample data: <strong>{r.name}</strong> is a fictional restaurant built for a portfolio demo. No orders are taken.
+      </div>
+    )}
+    <header class="site-head">
+      <div class="wrap head-row">
+        <a class="brand" href="/">{r.name}</a>
+        <nav aria-label="Main">
+          <a href="/" aria-current={path === "/" ? "page" : undefined}>Home</a>
+          <a href="/menu" aria-current={path === "/menu" ? "page" : undefined}>Menu</a>
+          <a href="/admin/report" aria-current={path === "/admin/report" ? "page" : undefined}>Menu report</a>
+        </nav>
+      </div>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="site-foot">
+      <div class="wrap">
+        <p>{r.name} · {r.address.street}, {r.address.city}, {r.address.region} · {r.phone}</p>
+        <p class="muted small">Demo site generated from menu JSON with Astro. Fictional business; address and phone are placeholders.</p>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,82 @@
+---
+import Base from "../../layouts/Base.astro";
+import type { Finding, Report } from "@restaurant-site-poc/menu-checker";
+import { appliedFixes, menu, reportAfterFixes, reportBeforeFixes, sourceMenu } from "../../lib/data.ts";
+
+// Optional: a report saved by `npm run check-menu -- data/sample-restaurant.menu.json --llm --json data/menu-report.llm.json`.
+// If the file isn't there (no API key), the page says the LLM pass was skipped.
+const saved = import.meta.glob<{ default: Report }>("../../../../../data/menu-report.llm.json", { eager: true });
+const llmReport = Object.values(saved)[0]?.default;
+const llmFindings = llmReport?.findings.filter((f) => f.source === "llm") ?? [];
+
+const itemName = new Map(menu.categories.flatMap((c) => c.items).map((i) => [i.id, i.name]));
+const groupName = new Map(sourceMenu.modifierGroups.map((g) => [g.id, g.name]));
+const fixedKeys = new Set(appliedFixes.map((f) => JSON.stringify(f)));
+const wasFixed = (f: Finding) => Boolean(f.fix && fixedKeys.has(JSON.stringify(f.fix)));
+const targetLabel = (f: Finding) =>
+  f.target.itemId
+    ? `Item: ${itemName.get(f.target.itemId) ?? f.target.itemId}`
+    : f.target.modifierGroupId
+      ? `Modifier group: ${groupName.get(f.target.modifierGroupId) ?? f.target.modifierGroupId}`
+      : "";
+const b = reportBeforeFixes;
+const a = reportAfterFixes;
+---
+<Base title={`Menu quality report | ${menu.restaurant.name}`} description="Menu-quality findings from the deterministic checker and optional AI pass." noindex>
+  <div class="wrap section report">
+    <h1>Menu quality report</h1>
+    <p class="muted">
+      Generated at build time by <code>@restaurant-site-poc/menu-checker</code> from <code>data/sample-restaurant.menu.json</code>.
+      Safe fixes (casing, empty modifier groups) are applied automatically before publishing; prices, duplicates and dietary tags wait for the owner.
+    </p>
+
+    <div class="stats">
+      <div class="stat"><span class="stat-num">{b.score} → {a.score}</span><span class="stat-label">Score before → after auto-fix</span></div>
+      <div class="stat sev-error"><span class="stat-num">{a.summary.error}</span><span class="stat-label">Errors open</span></div>
+      <div class="stat sev-warning"><span class="stat-num">{a.summary.warning}</span><span class="stat-label">Warnings open</span></div>
+      <div class="stat sev-info"><span class="stat-num">{a.summary.info}</span><span class="stat-label">Info open</span></div>
+      <div class="stat"><span class="stat-num">{appliedFixes.length}</span><span class="stat-label">Auto-fixed</span></div>
+    </div>
+
+    <h2>Findings ({b.findings.length} on {b.itemCount} items)</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Severity</th><th scope="col">Rule</th><th scope="col">Finding</th><th scope="col">Suggested action</th><th scope="col">Status</th></tr>
+        </thead>
+        <tbody>
+          {b.findings.map((f) => (
+            <tr>
+              <td><span class={`sev sev-${f.severity}`}>{f.severity}</span></td>
+              <td><code>{f.ruleId}</code></td>
+              <td>{f.message}<div class="muted small">{targetLabel(f)}</div></td>
+              <td>{f.suggestion}</td>
+              <td>{wasFixed(f) ? <span class="pill pill-ok">Auto-fixed</span> : <span class="pill">Needs owner</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <h2>AI copy suggestions</h2>
+    {llmReport?.llm.ran ? (
+      <>
+        <p class="muted">From the optional LLM pass ({llmReport.llm.model}). Output was validated against a zod schema; suggestions are never auto-applied.</p>
+        <ul class="llm-list">
+          {llmFindings.map((f) => (
+            <li class="card card-body">
+              <strong>{itemName.get(f.target.itemId ?? "") ?? f.target.itemId}</strong>
+              <p>{f.suggestion}</p>
+              <p class="muted small">{f.message}</p>
+            </li>
+          ))}
+        </ul>
+      </>
+    ) : (
+      <p class="muted">
+        LLM pass not run for this build. Set <code>OPENAI_API_KEY</code> (any OpenAI-compatible endpoint) and run
+        <code>npm run check-menu -- data/sample-restaurant.menu.json --llm --json data/menu-report.llm.json</code>.
+      </p>
+    )}
+  </div>
+</Base>

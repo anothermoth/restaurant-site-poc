@@ -1,0 +1,204 @@
+{
+  "restaurant": {
+    "slug": "ember-and-elm",
+    "name": "Ember & Elm Kitchen",
+    "isSampleData": true
+  },
+  "itemCount": 17,
+  "summary": {
+    "error": 1,
+    "warning": 9,
+    "info": 3,
+    "total": 15,
+    "autoFixable": 4
+  },
+  "score": 51,
+  "findings": [
+    {
+      "ruleId": "price-outlier",
+      "severity": "error",
+      "source": "rule",
+      "message": "\"Truffle Pie\" is $185.00, 10.0x above the Wood-Fired Pizza median.",
+      "target": {
+        "categoryId": "pizza",
+        "itemId": "truffle-pie"
+      },
+      "suggestion": "Looks like a decimal slip: did you mean $18.50? Category median is $18.50."
+    },
+    {
+      "ruleId": "empty-modifier-group",
+      "severity": "warning",
+      "source": "rule",
+      "message": "Modifier group \"Dressing\" has no options but is attached to \"Caesar Salad\".",
+      "target": {
+        "modifierGroupId": "dressing"
+      },
+      "suggestion": "Add options, or remove the group. Auto-fix removes it and detaches it from items.",
+      "fix": {
+        "kind": "remove-modifier-group",
+        "modifierGroupId": "dressing"
+      }
+    },
+    {
+      "ruleId": "duplicate-item",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"caesar salad\" (caesar-2) duplicates \"Caesar Salad\" (caesar).",
+      "target": {
+        "categoryId": "salads",
+        "itemId": "caesar-2"
+      },
+      "suggestion": "Merge them into one item, or rename one if they really differ."
+    },
+    {
+      "ruleId": "missing-description",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"Wood-Fired Wings\" has no description.",
+      "target": {
+        "categoryId": "starters",
+        "itemId": "wings"
+      },
+      "suggestion": "Add 1-2 sentences: main ingredients, how it's cooked, and what it's served with."
+    },
+    {
+      "ruleId": "missing-photo",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"Wood-Fired Wings\" has no photo.",
+      "target": {
+        "categoryId": "starters",
+        "itemId": "wings"
+      },
+      "suggestion": "Add a well-lit photo, at least 480x360."
+    },
+    {
+      "ruleId": "missing-photo",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"sausage & fennel\" has no photo.",
+      "target": {
+        "categoryId": "pizza",
+        "itemId": "sausage-fennel"
+      },
+      "suggestion": "Add a well-lit photo, at least 480x360."
+    },
+    {
+      "ruleId": "missing-photo",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"caesar salad\" has no photo.",
+      "target": {
+        "categoryId": "salads",
+        "itemId": "caesar-2"
+      },
+      "suggestion": "Add a well-lit photo, at least 480x360."
+    },
+    {
+      "ruleId": "missing-photo",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"Tiramisu\" has no photo.",
+      "target": {
+        "categoryId": "desserts",
+        "itemId": "tiramisu"
+      },
+      "suggestion": "Add a well-lit photo, at least 480x360."
+    },
+    {
+      "ruleId": "missing-dietary-tags",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"Wood-Fired Wings\" has no dietary or allergen tags.",
+      "target": {
+        "categoryId": "starters",
+        "itemId": "wings"
+      },
+      "suggestion": "Confirm tags with the kitchen (not auto-fixed: allergen info must come from a person)."
+    },
+    {
+      "ruleId": "missing-dietary-tags",
+      "severity": "warning",
+      "source": "rule",
+      "message": "\"Crispy Chicken Sandwich\" has no dietary or allergen tags.",
+      "target": {
+        "categoryId": "burgers",
+        "itemId": "chicken-sandwich"
+      },
+      "suggestion": "Confirm with the kitchen. The description suggests: contains-dairy, contains-gluten."
+    },
+    {
+      "ruleId": "inconsistent-naming",
+      "severity": "info",
+      "source": "rule",
+      "message": "\"GARLIC KNOTS\" uses ALL CAPS; the rest of the menu is Title Case.",
+      "target": {
+        "categoryId": "starters",
+        "itemId": "garlic-knots"
+      },
+      "suggestion": "Rename to \"Garlic Knots\".",
+      "fix": {
+        "kind": "rename-item",
+        "itemId": "garlic-knots",
+        "to": "Garlic Knots"
+      }
+    },
+    {
+      "ruleId": "inconsistent-naming",
+      "severity": "info",
+      "source": "rule",
+      "message": "\"sausage & fennel\" uses all lowercase; the rest of the menu is Title Case.",
+      "target": {
+        "categoryId": "pizza",
+        "itemId": "sausage-fennel"
+      },
+      "suggestion": "Rename to \"Sausage & Fennel\".",
+      "fix": {
+        "kind": "rename-item",
+        "itemId": "sausage-fennel",
+        "to": "Sausage & Fennel"
+      }
+    },
+    {
+      "ruleId": "inconsistent-naming",
+      "severity": "info",
+      "source": "rule",
+      "message": "\"caesar salad\" uses all lowercase; the rest of the menu is Title Case.",
+      "target": {
+        "categoryId": "salads",
+        "itemId": "caesar-2"
+      },
+      "suggestion": "Rename to \"Caesar Salad\".",
+      "fix": {
+        "kind": "rename-item",
+        "itemId": "caesar-2",
+        "to": "Caesar Salad"
+      }
+    },
+    {
+      "ruleId": "llm-copy-suggestion",
+      "severity": "info",
+      "source": "llm",
+      "message": "AI suggestion for \"Wood-Fired Wings\": Added appetizing preparation details and flavor options implied by the wood-fired name and American/pizza restaurant context, while keeping under 100 characters.",
+      "target": {
+        "itemId": "wings"
+      },
+      "suggestion": "Description: \"Crispy wood-fired chicken wings with your choice of classic buffalo or smoky BBQ sauce.\""
+    },
+    {
+      "ruleId": "llm-copy-suggestion",
+      "severity": "info",
+      "source": "llm",
+      "message": "AI suggestion for \"Crispy Chicken Sandwich\": Enhanced sensory appeal with specific textures (crunchy, crisp) and bun detail already implied by the original description, staying under 120 characters.",
+      "target": {
+        "itemId": "chicken-sandwich"
+      },
+      "suggestion": "Description: \"Buttermilk-fried chicken thigh, crunchy slaw, and crisp dill pickles on a toasted brioche bun.\". Tags to confirm: contains-dairy, contains-gluten"
+    }
+  ],
+  "llm": {
+    "ran": true,
+    "model": "grok-4.20-0309-non-reasoning",
+    "suggestionCount": 2
+  }
+}

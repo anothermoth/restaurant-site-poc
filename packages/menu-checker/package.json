@@ -1,0 +1,19 @@
+{
+  "name": "@restaurant-site-poc/menu-checker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic menu-quality rules, safe auto-fixes and an optional OpenAI-compatible LLM pass.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "check-menu": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@restaurant-site-poc/menu-schema": "0.1.0"
+  }
+}

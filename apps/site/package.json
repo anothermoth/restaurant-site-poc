@@ -1,0 +1,27 @@
+{
+  "name": "@restaurant-site-poc/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@astrojs/react": "^7.1.9",
+    "@restaurant-site-poc/menu-checker": "0.1.0",
+    "@restaurant-site-poc/menu-schema": "0.1.0",
+    "astro": "^7.4.13",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.1",
+    "@types/react-dom": "^19.3.0",
+    "jsdom": "^31.0.1"
+  }
+}

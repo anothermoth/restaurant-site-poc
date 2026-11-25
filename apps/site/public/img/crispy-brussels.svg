@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" width="480" height="360" role="img" aria-label="Crispy Brussels Sprouts">
+<rect width="480" height="360" fill="#f6d7a7"/>
+<ellipse cx="240" cy="180" rx="170" ry="120" fill="#fff" opacity=".9"/>
+<ellipse cx="240" cy="175" rx="120" ry="82" fill="#e0a458" opacity=".55"/><circle cx="280" cy="179" r="8" fill="#e0a458" opacity=".85"/><circle cx="256" cy="196" r="11" fill="#8c4a1f" opacity=".85"/><circle cx="221" cy="195" r="14" fill="#e0a458" opacity=".85"/><circle cx="200" cy="173" r="8" fill="#8c4a1f" opacity=".85"/><circle cx="214" cy="148" r="11" fill="#e0a458" opacity=".85"/><circle cx="251" cy="143" r="14" fill="#8c4a1f" opacity=".85"/><circle cx="180" cy="182" r="8" fill="#e0a458" opacity=".85"/>
+<text x="240" y="338" font-family="system-ui,sans-serif" font-size="18" text-anchor="middle" fill="#8c4a1f" opacity=".7">illustration: Crispy Brussels Sprouts</text>
+</svg>
