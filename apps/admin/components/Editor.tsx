@@ -276,7 +276,7 @@ export function Editor({ slug, siteUrl }: { slug: string; siteUrl?: string }) {
                 onReject={() => run(() => api.reject(slug, state.pending!.id), () => ({ tone: "info", text: "Discarded. Nothing changed." }))}
               />
             ) : (
-              <div className="ideas" aria-label="Suggestions">
+              <div className="ideas" aria-label="Suggestions" key={editIdOf(activeTarget) ?? "none"}>
                 <p className="ideas-label">{activeTarget ? `Try, for ${selName}:` : "Try:"}</p>
                 {ideas.map((s) => (
                   <button
