@@ -212,11 +212,11 @@ Lighthouse 13.6.0 on Chrome 156 (headless), run locally against the production b
 | `/menu` | mobile | 100 | 100 | 100 | 100 | 0.7 s | 0.7 s | 0 ms | 0 | 96 KiB |
 | `/menu` | desktop | 100 | 100 | 100 | 100 | 0.2 s | 0.2 s | 0 ms | 0 | 96 KiB |
 
-Caveats: this is a lab test on localhost, with no CDN and no network latency, a small sample menu, SVG placeholder images, and none of the third-party analytics tags a real restaurant site carries. Owner's 5.4s → 0.7s numbers are p75 field data across real traffic; these are not comparable to that, they only show the architecture starts fast. The home page ships no JavaScript. On `/menu`, the cart island is about 8 KB of app code plus React's runtime, loaded at idle.
+Caveats: this is a lab test on localhost, with no CDN and no network latency, a small sample menu, SVG placeholder images (this local run predates the photo redesign), and none of the third-party analytics tags a real restaurant site carries. Owner's 5.4s → 0.7s numbers are p75 field data across real traffic; these are not comparable to that, they only show the architecture starts fast. The home page ships no JavaScript. On `/menu`, the cart island is about 8 KB of app code plus React's runtime, loaded at idle.
 
 Reproduce: `npm run build && npm run lighthouse` (needs Chrome installed). These numbers were measured before the editor work added `data-edit-id` attributes to the pages.
 
-**Deployed (Cloudflare Pages).** The same Lighthouse run against https://restaurant-site-poc.pages.dev over the real network (from the build machine, Nov 24, 2026; raw: [`docs/lighthouse-live.json`](docs/lighthouse-live.json)) scored 100 in all four categories on `/` and `/menu`, in both modes: LCP 0.9 s on mobile and 0.2 s on desktop, CLS 0, TBT 0–40 ms; 7 KiB transferred for `/` and 91 KiB for `/menu`. It's still one lab run from one location, not field data.
+**Deployed (Cloudflare Pages), with real photos.** After the redesign, the same Lighthouse run against https://restaurant-site-poc.pages.dev over the real network (from the build machine, Nov 24, 2026, 8:43 PM CST; raw: [`docs/lighthouse-live.json`](docs/lighthouse-live.json), which also keeps the pre-redesign run) scored 100 in all four categories on `/` and `/menu`, in both modes. LCP is now the hero photo: 1.5 s on mobile and 0.4 s on desktop for `/`, 1.1 s and 0.3 s for `/menu`; CLS 0, TBT 0–40 ms. Total transfer is about 310 KiB for `/` and 280 KiB for `/menu`, almost all of it responsive AVIF images and two woff2 fonts (before the redesign, with SVG placeholders: LCP 0.9 s mobile, 7 KiB and 91 KiB). It's still one lab run from one location, not field data.
 
 ## Run it
 
