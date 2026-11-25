@@ -3,18 +3,13 @@ import Base from "../layouts/Base.astro";
 import Cart from "../components/Cart.tsx";
 import Photo from "../components/Photo.astro";
 import { cartMenu, menu } from "../lib/data.ts";
-import { priceText, restaurantJsonLd } from "../lib/jsonld.ts";
+import { restaurantJsonLd } from "../lib/jsonld.ts";
+import { allergenLine, dietWords, featureItem, menuPrice } from "@restaurant-site-poc/menu-schema/display";
 import { withPhotoUrls } from "../lib/photos.ts";
 
 const r = menu.restaurant;
 const sections = menu.categories.filter((c) => !c.hidden);
 const site = Astro.site!.toString();
-const TAG_LABEL: Record<string, string> = {
-  vegetarian: "V", vegan: "VG", "gluten-free": "GF", "dairy-free": "DF", "nut-free": "NF", spicy: "Spicy",
-};
-const TAG_TITLE: Record<string, string> = {
-  vegetarian: "Vegetarian", vegan: "Vegan", "gluten-free": "Gluten-free", "dairy-free": "Dairy-free", "nut-free": "Nut-free", spicy: "Spicy",
-};
 const jsonLd = restaurantJsonLd(await withPhotoUrls(menu), site, { includeMenu: true });
 ---
 <Base
@@ -33,41 +28,52 @@ const jsonLd = restaurantJsonLd(await withPhotoUrls(menu), site, { includeMenu: 
   </nav>
 
   <div class="wrap menu-body">
-    {sections.map((c) => (
-      <section class="menu-section" id={c.id} aria-labelledby={`${c.id}-h`} data-edit-id={`category:${c.id}`}>
-        <div class="section-head">
-          <h2 id={`${c.id}-h`} class="title">{c.name}</h2>
-          {c.description && <p class="muted">{c.description}</p>}
-        </div>
-        <ul class="menu-list">
-          {c.items.filter((i) => i.available).map((i) => {
-            const allergens = i.dietaryTags.filter((t) => t.startsWith("contains-")).map((t) => t.replace("contains-", ""));
-            return (
-              <li class:list={["dish", { "no-photo": !i.photo }]} id={i.id} data-edit-id={`item:${i.id}`}>
-                <div class="dish-text">
-                  <h3 data-edit-id={`item:${i.id}.name`}>{i.name}</h3>
-                  {i.description && <p class="dish-desc" data-edit-id={`item:${i.id}.description`}>{i.description}</p>}
-                  <p class="dish-meta">
-                    <span class="price" data-edit-id={`item:${i.id}.price`}>{priceText(i.price, menu.currency)}</span>
-                    {i.dietaryTags.filter((t) => TAG_LABEL[t]).map((t) => <abbr class="tag" title={TAG_TITLE[t]}>{TAG_LABEL[t]}</abbr>)}
-                  </p>
-                  {allergens.length > 0 && <p class="allergens">Contains {allergens.join(", ")}</p>}
-                </div>
-                <div class="dish-side">
-                  {i.photo && (
-                    <Photo class="dish-img" src={i.photo.src} alt={i.photo.alt} widths={[160, 240, 320, 480]} sizes="(min-width: 640px) 168px, 128px" />
-                  )}
-                  <button type="button" class="add-btn" data-add-item={i.id} aria-label={`Add ${i.name} to cart`}>
-                    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
-                    <span class="add-text">Add</span>
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    ))}
+    {sections.map((c, n) => {
+      const items = c.items.filter((i) => i.available);
+      const feature = featureItem(items);
+      return (
+        <section class="menu-section" id={c.id} aria-labelledby={`${c.id}-h`} data-edit-id={`category:${c.id}`}>
+          <header class="section-head">
+            <h2 id={`${c.id}-h`} class="title">{c.name}</h2>
+            {c.description && <p class="section-note">{c.description}</p>}
+          </header>
+          <div class:list={["section-body", { "has-feature": feature, "feature-left": n % 2 === 1 }]}>
+            <ul class="menu-list">
+              {items.map((i) => {
+                const diet = dietWords(i.dietaryTags);
+                const allergens = allergenLine(i.dietaryTags);
+                return (
+                  <li class="dish" id={i.id} data-edit-id={`item:${i.id}`}>
+                    <div class="dish-line">
+                      <h3 class="dish-name" data-edit-id={`item:${i.id}.name`}>{i.name}</h3>
+                      <span class="dish-leader" aria-hidden="true"></span>
+                      <span class="price" data-edit-id={`item:${i.id}.price`}><span class="sr-only">$</span>{menuPrice(i.price)}</span>
+                      <button type="button" class="add-btn" data-add-item={i.id} aria-label={`Add ${i.name} to cart`}>
+                        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+                      </button>
+                    </div>
+                    {i.description && <p class="dish-desc" data-edit-id={`item:${i.id}.description`}>{i.description}</p>}
+                    {(diet.length > 0 || allergens) && (
+                      <p class="dish-notes">
+                        {diet.map((d) => <span class:list={["diet", { "diet-spicy": d === "Spicy" }]}>{d}</span>)}
+                        {allergens && <span class="allergen">{allergens}</span>}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {feature?.photo && (
+              <figure class="section-feature">
+                <Photo class="feature-img" src={feature.photo.src} alt={feature.photo.alt} widths={[480, 720, 960]} sizes="(min-width: 1000px) 420px, 92vw" />
+                <figcaption>{feature.name}</figcaption>
+              </figure>
+            )}
+          </div>
+        </section>
+      );
+    })}
+    <p class="menu-legend">Prices in US dollars. Please tell us about any allergies when you order.</p>
   </div>
   <Cart client:idle menu={cartMenu} storageKey={`cart:${r.slug}`} />
   <script>

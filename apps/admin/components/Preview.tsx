@@ -1,4 +1,6 @@
-import { formatPrice } from "@restaurant-site-poc/menu-schema/pricing";
+import { useMemo } from "react";
+import { allergenLine, dietWords, featureItem, menuPrice } from "@restaurant-site-poc/menu-schema/display";
+import { applySafeFixes, checkMenu } from "@restaurant-site-poc/menu-checker";
 import type { Menu } from "../lib/types.ts";
 import { formatHours } from "../lib/format.ts";
 
@@ -24,7 +26,7 @@ export function hideBroken(e: { currentTarget: HTMLImageElement }) {
  * site's look (photo hero, serif headings, photo-forward menu rows).
  */
 export function Preview({
-  menu,
+  menu: source,
   highlight = [],
   published = false,
   selected,
@@ -38,6 +40,17 @@ export function Preview({
   /** Clicking an item or section heading in the preview selects it. */
   onPick?: (target: { kind: "item" | "category"; id: string }) => void;
 }) {
+  // Show names the way they will publish: the same safe auto-fixes the site build applies
+  // (e.g. "GARLIC KNOTS" -> "Garlic Knots"). The draft itself is unchanged; the menu list
+  // still flags the raw name so the owner can fix it for good.
+  const menu = useMemo(() => {
+    if (published) return source;
+    try {
+      return applySafeFixes(source, checkMenu(source).findings).menu;
+    } catch {
+      return source;
+    }
+  }, [source, published]);
   const hl = new Set(highlight);
   // The published view drops hidden sections and items, exactly like the Astro menu page.
   const categories = published ? menu.categories.filter((c) => !c.hidden).map((c) => ({ ...c, items: c.items.filter((i) => i.available) })) : menu.categories;
@@ -60,43 +73,65 @@ export function Preview({
         </div>
       </header>
       <div data-edit-id="menu" className={cls("menu", "pv-menu")}>
-        {categories.map((c) => (
-          <section key={c.id} data-edit-id={`category:${c.id}`} className={cls(`category:${c.id}`, c.hidden ? "pv-cat is-hidden" : "pv-cat")}>
-            <h2 onClick={onPick ? () => onPick({ kind: "category", id: c.id }) : undefined}>
-              {c.name} {c.hidden && <span className="pv-flag">Hidden</span>}
-            </h2>
-            <ul>
-              {c.items.map((i) => (
-                <li key={i.id} data-edit-id={`item:${i.id}`} className={cls(`item:${i.id}`, i.available ? "pv-item" : "pv-item is-hidden")}
-                  onClick={onPick ? () => onPick({ kind: "item", id: i.id }) : undefined}
-                >
-                  <div className="pv-item-text">
-                    <strong data-edit-id={`item:${i.id}.name`} className={cls(`item:${i.id}.name`)}>
-                      {i.name}
-                    </strong>
-                    {!i.available && <span className="pv-flag">Hidden</span>}
-                    {i.description && (
-                      <p data-edit-id={`item:${i.id}.description`} className={cls(`item:${i.id}.description`)}>
-                        {i.description}
-                      </p>
-                    )}
-                    <div className="pv-meta">
-                      <span data-edit-id={`item:${i.id}.price`} className={cls(`item:${i.id}.price`, "pv-price")}>
-                        {formatPrice(i.price, menu.currency)}
-                      </span>
-                      {i.dietaryTags.length > 0 && (
-                        <span data-edit-id={`item:${i.id}.tags`} className={cls(`item:${i.id}.tags`, "pv-tags")}>
-                          {i.dietaryTags.join(" · ")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {i.photo && <img className="pv-thumb" src={previewSrc(i.photo.src)} alt={i.photo.alt} loading="lazy" decoding="async" onError={hideBroken} />}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+        {categories.map((c, n) => {
+          const feature = featureItem(c.items);
+          return (
+            <section key={c.id} data-edit-id={`category:${c.id}`} className={cls(`category:${c.id}`, c.hidden ? "pv-cat is-hidden" : "pv-cat")}>
+              <header className="pv-cat-head">
+                <h2 onClick={onPick ? () => onPick({ kind: "category", id: c.id }) : undefined}>
+                  {c.name} {c.hidden && <span className="pv-flag">Hidden</span>}
+                </h2>
+                {c.description && <p className="pv-cat-note">{c.description}</p>}
+              </header>
+              <div className={`pv-body${feature ? " has-feature" : ""}${n % 2 ? " feature-left" : ""}`}>
+                <ul>
+                  {c.items.map((i) => {
+                    const diet = dietWords(i.dietaryTags);
+                    const allergens = allergenLine(i.dietaryTags);
+                    return (
+                      <li key={i.id} data-edit-id={`item:${i.id}`} className={cls(`item:${i.id}`, i.available ? "pv-item" : "pv-item is-hidden")}
+                        onClick={onPick ? () => onPick({ kind: "item", id: i.id }) : undefined}
+                      >
+                        <div className="pv-line">
+                          <strong data-edit-id={`item:${i.id}.name`} className={cls(`item:${i.id}.name`, "pv-name")}>
+                            {i.name}
+                          </strong>
+                          {!i.available && <span className="pv-flag">Hidden</span>}
+                          <span className="pv-leader" aria-hidden="true" />
+                          <span data-edit-id={`item:${i.id}.price`} className={cls(`item:${i.id}.price`, "pv-price")}>
+                            <span className="sr-only">$</span>
+                            {menuPrice(i.price)}
+                          </span>
+                        </div>
+                        {i.description && (
+                          <p data-edit-id={`item:${i.id}.description`} className={cls(`item:${i.id}.description`, "pv-desc")}>
+                            {i.description}
+                          </p>
+                        )}
+                        {(diet.length > 0 || allergens) && (
+                          <p data-edit-id={`item:${i.id}.tags`} className={cls(`item:${i.id}.tags`, "pv-notes")}>
+                            {diet.map((d) => (
+                              <span key={d} className={d === "Spicy" ? "pv-diet pv-spicy" : "pv-diet"}>
+                                {d}
+                              </span>
+                            ))}
+                            {allergens && <span className="pv-allergen">{allergens}</span>}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {feature?.photo && (
+                  <figure className="pv-feature">
+                    <img className="pv-thumb" src={previewSrc(feature.photo.src)} alt={feature.photo.alt} loading="lazy" decoding="async" onError={hideBroken} />
+                    <figcaption>{feature.name}</figcaption>
+                  </figure>
+                )}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );

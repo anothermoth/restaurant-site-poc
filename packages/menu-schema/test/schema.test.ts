@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CartError, formatPrice, parseMenu, priceCart, safeParseMenu } from "../src/index.ts";
 import { baseMenu } from "./fixtures.ts";
+import { allergenLine, dietWords, featureItem, menuPrice } from "../src/display.ts";
 
 describe("menu schema", () => {
   it("parses the sample restaurant shipped in data/", () => {
@@ -75,5 +76,26 @@ describe("priceCart", () => {
     expect(() =>
       priceCart(menu, [{ itemId: "burger", quantity: 1, selections: { size: ["small", "large"] } }]),
     ).toThrow(/needs 1-1/);
+  });
+});
+
+describe("display helpers", () => {
+  it("formats prices like a printed menu", () => {
+    expect(menuPrice(1400)).toBe("14");
+    expect(menuPrice(950)).toBe("9.50");
+    expect(menuPrice(18550)).toBe("185.50");
+  });
+  it("turns tags into plain words", () => {
+    expect(dietWords(["vegetarian", "spicy", "contains-dairy"])).toEqual(["Vegetarian", "Spicy"]);
+    expect(dietWords(["vegan", "vegetarian", "gluten-free"])).toEqual(["Vegan", "Gluten-free"]);
+    expect(allergenLine(["contains-dairy"])).toBe("Contains dairy");
+    expect(allergenLine(["contains-dairy", "contains-gluten"])).toBe("Contains dairy & gluten");
+    expect(allergenLine(["contains-dairy", "contains-gluten", "contains-nuts"])).toBe("Contains dairy, gluten & nuts");
+    expect(allergenLine(["vegan"])).toBeNull();
+  });
+  it("picks the first shown item with a photo as the section feature", () => {
+    const p = { src: "/photos/a.jpg", alt: "a" };
+    expect(featureItem([{ available: true }, { available: false, photo: p }, { available: true, photo: p, id: "x" }] as never[])).toMatchObject({ id: "x" });
+    expect(featureItem([{ available: true }] as never[])).toBeUndefined();
   });
 });

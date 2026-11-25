@@ -6,7 +6,8 @@
   "description": "Zod schema and types for a restaurant menu (categories, items, modifier groups, prices, photos, dietary tags).",
   "exports": {
     ".": "./src/index.ts",
-    "./pricing": "./src/pricing.ts"
+    "./pricing": "./src/pricing.ts",
+    "./display": "./src/display.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

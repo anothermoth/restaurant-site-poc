@@ -41,10 +41,23 @@ describe("<Preview />", () => {
   it("renders stable data-edit-id targets and highlights the ones a change touches", () => {
     const { container } = render(<Preview menu={menu} highlight={change.highlight} />);
     const price = container.querySelector('[data-edit-id="item:margherita.price"]')!;
-    expect(price.textContent).toBe("$15.00");
+    expect(price.textContent).toBe("$15");
     expect(price.classList.contains("hl")).toBe(true);
     expect(container.querySelector('[data-edit-id="item:wings.price"]')!.classList.contains("hl")).toBe(false);
     expect(container.querySelector('[data-edit-id="restaurant.hours"]')!.textContent).toContain("Tue, Wed, Thu 11:00–21:00");
+  });
+});
+
+describe("<Preview /> menu design", () => {
+  it("shows names as they will publish, plain-word dietary notes, and one photo per section", () => {
+    const { container } = render(<Preview menu={menu} />);
+    expect(container.querySelector('[data-edit-id="item:garlic-knots.name"]')!.textContent).toBe("Garlic Knots");
+    expect(container.querySelector('[data-edit-id="item:garlic-knots.tags"]')!.textContent).toBe("VegetarianContains dairy & gluten");
+    expect(container.textContent).not.toMatch(/contains-dairy|contains-gluten/);
+    const sections = container.querySelectorAll(".pv-cat");
+    for (const sec of sections) expect(sec.querySelectorAll("img").length).toBeLessThanOrEqual(1);
+    // The draft itself is untouched.
+    expect(menu.categories[0]!.items.find((i) => i.id === "garlic-knots")!.name).toBe("GARLIC KNOTS");
   });
 });
 

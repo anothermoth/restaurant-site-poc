@@ -2,7 +2,8 @@
 import Base from "../layouts/Base.astro";
 import Photo from "../components/Photo.astro";
 import { menu } from "../lib/data.ts";
-import { priceText, restaurantJsonLd } from "../lib/jsonld.ts";
+import { restaurantJsonLd } from "../lib/jsonld.ts";
+import { menuPrice } from "@restaurant-site-poc/menu-schema/display";
 import { photoUrl, withPhotoUrls } from "../lib/photos.ts";
 import { clock, closedDays, dayRange } from "../lib/hours.ts";
 
@@ -39,7 +40,7 @@ const jsonLd = restaurantJsonLd(await withPhotoUrls(menu), site);
     <div class="wrap facts-row">
       <div class="fact">
         <span class="fact-label">Open</span>
-        <span>{r.hours.map((h) => dayRange(h.days)).join(" · ")}</span>
+        <span>{dayRange(r.hours.flatMap((h) => h.days))}{closed.length > 0 && ` · Closed ${dayRange(closed)}`}</span>
       </div>
       <div class="fact">
         <span class="fact-label">Find us</span>
@@ -72,7 +73,7 @@ const jsonLd = restaurantJsonLd(await withPhotoUrls(menu), site);
               </div>
               <div class="feature-body">
                 <h3>{i.name}</h3>
-                <span class="feature-price">{priceText(i.price, menu.currency)}</span>
+                <span class="feature-price"><span class="sr-only">$</span>{menuPrice(i.price)}</span>
               </div>
               {i.description && <p class="feature-desc">{i.description}</p>}
             </a>
