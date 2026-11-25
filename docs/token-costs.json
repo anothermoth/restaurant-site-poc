@@ -1,0 +1,772 @@
+{
+  "measuredAt": "2026-11-25T00:41:15.582Z",
+  "model": "grok-4.20-0309-non-reasoning",
+  "maxTokens": 220,
+  "systemPromptChars": 1777,
+  "pricesUsdPer1M": {
+    "input": 1.25,
+    "cachedInput": 0.2,
+    "output": 2.5,
+    "source": "xAI GET /v1/language-models, 2026-11-24"
+  },
+  "passes": [
+    {
+      "label": "cold cache",
+      "requests": 21,
+      "parser": 15,
+      "llmCalls": 6,
+      "cacheHits": 0,
+      "inputTokens": 4264,
+      "cachedInputTokens": 1280,
+      "outputTokens": 142,
+      "costUsd": 0.004341,
+      "avgCostPerLlmCall": 0.000724,
+      "rows": [
+        {
+          "utterance": "Change the price of the margarita to $16.50",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_price",
+              "itemId": "margherita",
+              "price": 1650
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "make the truffle pie $18.50",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_price",
+              "itemId": "truffle-pie",
+              "price": 1850
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "86 the burrata",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "hide_item",
+              "itemId": "burrata"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "tiramisu is sold out",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "hide_item",
+              "itemId": "tiramisu"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "bring back the wings",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "show_item",
+              "itemId": "wings"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "hide the desserts section",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "toggle_category",
+              "categoryId": "desserts",
+              "visible": false
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "rename garlic knots to Garlic Butter Knots",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "rename_item",
+              "itemId": "garlic-knots",
+              "name": "Garlic Butter Knots"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "set the description of the wings to smoky wood-fired wings with hot honey",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_description",
+              "itemId": "wings",
+              "text": "Smoky wood-fired wings with hot honey."
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "mark the black bean burger as vegan",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "add_dietary_tag",
+              "itemId": "veggie-burger",
+              "tag": "vegan"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "the chicken sandwich contains dairy",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "add_dietary_tag",
+              "itemId": "chicken-sandwich",
+              "tag": "contains-dairy"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "we're closed on mondays and tuesdays",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_hours",
+              "days": [
+                "Mo",
+                "Tu"
+              ],
+              "closed": true
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "set hours on friday and saturday to 11am to 11pm",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_hours",
+              "days": [
+                "Fr",
+                "Sa"
+              ],
+              "opens": "11:00",
+              "closes": "23:00",
+              "closed": false
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "change the tagline to Fired up since 2019",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_hero_text",
+              "text": "Fired up since 2019"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "move the tiramisu to the top",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "reorder",
+              "kind": "item",
+              "id": "tiramisu",
+              "to": "top"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "raise the wings by $1",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "adjust_price",
+              "itemId": "wings",
+              "deltaCents": 100
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "knock a dollar off the smash burger",
+          "source": "llm",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "adjust_price",
+                "itemId": "smash-burger",
+                "deltaCents": -100
+              }
+            ]
+          },
+          "compiled": "Double Smash Burger: price $15.00 → $14.00",
+          "inputTokens": 710,
+          "cachedInputTokens": 128,
+          "outputTokens": 22,
+          "costUsd": 0.0008081000000000001,
+          "latencyMs": 632
+        },
+        {
+          "utterance": "we don't have any more brussels sprouts today",
+          "source": "llm",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "hide_item",
+                "itemId": "crispy-brussels"
+              }
+            ]
+          },
+          "compiled": "Hide \"Crispy Brussels Sprouts\" from the menu",
+          "inputTokens": 712,
+          "cachedInputTokens": 128,
+          "outputTokens": 17,
+          "costUsd": 0.0007981,
+          "latencyMs": 588
+        },
+        {
+          "utterance": "let's lead with the salads section",
+          "source": "llm",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "reorder",
+                "kind": "category",
+                "id": "salads",
+                "to": "top"
+              }
+            ]
+          },
+          "compiled": "Move the Salads section to the top",
+          "inputTokens": 709,
+          "cachedInputTokens": 128,
+          "outputTokens": 21,
+          "costUsd": 0.00080435,
+          "latencyMs": 491
+        },
+        {
+          "utterance": "can you put pizzas before starters on the menu",
+          "source": "llm",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "reorder",
+                "kind": "category",
+                "id": "pizza",
+                "to": "before",
+                "ref": "starters"
+              }
+            ]
+          },
+          "compiled": "Move the Wood-Fired Pizza section before Starters",
+          "inputTokens": 712,
+          "cachedInputTokens": 128,
+          "outputTokens": 25,
+          "costUsd": 0.0008181,
+          "latencyMs": 627
+        },
+        {
+          "utterance": "the market greens are gluten free and vegan",
+          "source": "llm",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "add_dietary_tag",
+                "itemId": "market-greens",
+                "tag": "gluten-free"
+              },
+              {
+                "cmd": "add_dietary_tag",
+                "itemId": "market-greens",
+                "tag": "vegan"
+              }
+            ]
+          },
+          "compiled": "rejected: No change: \"Market Greens\" is already tagged gluten-free; \"Market Greens\" is already tagged vegan",
+          "inputTokens": 711,
+          "cachedInputTokens": 128,
+          "outputTokens": 45,
+          "costUsd": 0.0008668500000000001,
+          "latencyMs": 668
+        },
+        {
+          "utterance": "add a banner about our holiday party",
+          "source": "llm",
+          "outcome": "refuse",
+          "reply": {
+            "refuse": {
+              "reason": "banners are not supported"
+            }
+          },
+          "compiled": "n/a",
+          "inputTokens": 710,
+          "cachedInputTokens": 640,
+          "outputTokens": 12,
+          "costUsd": 0.0002455,
+          "latencyMs": 526
+        }
+      ]
+    },
+    {
+      "label": "warm cache (same corpus again)",
+      "requests": 21,
+      "parser": 15,
+      "llmCalls": 0,
+      "cacheHits": 6,
+      "inputTokens": 0,
+      "cachedInputTokens": 0,
+      "outputTokens": 0,
+      "costUsd": 0,
+      "avgCostPerLlmCall": 0,
+      "rows": [
+        {
+          "utterance": "Change the price of the margarita to $16.50",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_price",
+              "itemId": "margherita",
+              "price": 1650
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "make the truffle pie $18.50",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_price",
+              "itemId": "truffle-pie",
+              "price": 1850
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "86 the burrata",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "hide_item",
+              "itemId": "burrata"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "tiramisu is sold out",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "hide_item",
+              "itemId": "tiramisu"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "bring back the wings",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "show_item",
+              "itemId": "wings"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "hide the desserts section",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "toggle_category",
+              "categoryId": "desserts",
+              "visible": false
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "rename garlic knots to Garlic Butter Knots",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "rename_item",
+              "itemId": "garlic-knots",
+              "name": "Garlic Butter Knots"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "set the description of the wings to smoky wood-fired wings with hot honey",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_description",
+              "itemId": "wings",
+              "text": "Smoky wood-fired wings with hot honey."
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "mark the black bean burger as vegan",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "add_dietary_tag",
+              "itemId": "veggie-burger",
+              "tag": "vegan"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "the chicken sandwich contains dairy",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "add_dietary_tag",
+              "itemId": "chicken-sandwich",
+              "tag": "contains-dairy"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "we're closed on mondays and tuesdays",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_hours",
+              "days": [
+                "Mo",
+                "Tu"
+              ],
+              "closed": true
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "set hours on friday and saturday to 11am to 11pm",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_hours",
+              "days": [
+                "Fr",
+                "Sa"
+              ],
+              "opens": "11:00",
+              "closes": "23:00",
+              "closed": false
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "change the tagline to Fired up since 2019",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "set_hero_text",
+              "text": "Fired up since 2019"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "move the tiramisu to the top",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "reorder",
+              "kind": "item",
+              "id": "tiramisu",
+              "to": "top"
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "raise the wings by $1",
+          "source": "parser",
+          "outcome": "commands",
+          "commands": [
+            {
+              "cmd": "adjust_price",
+              "itemId": "wings",
+              "deltaCents": 100
+            }
+          ],
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "knock a dollar off the smash burger",
+          "source": "llm-cache",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "adjust_price",
+                "itemId": "smash-burger",
+                "deltaCents": -100
+              }
+            ]
+          },
+          "compiled": "Double Smash Burger: price $15.00 → $14.00",
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "we don't have any more brussels sprouts today",
+          "source": "llm-cache",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "hide_item",
+                "itemId": "crispy-brussels"
+              }
+            ]
+          },
+          "compiled": "Hide \"Crispy Brussels Sprouts\" from the menu",
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "let's lead with the salads section",
+          "source": "llm-cache",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "reorder",
+                "kind": "category",
+                "id": "salads",
+                "to": "top"
+              }
+            ]
+          },
+          "compiled": "Move the Salads section to the top",
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "can you put pizzas before starters on the menu",
+          "source": "llm-cache",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "reorder",
+                "kind": "category",
+                "id": "pizza",
+                "to": "before",
+                "ref": "starters"
+              }
+            ]
+          },
+          "compiled": "Move the Wood-Fired Pizza section before Starters",
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "the market greens are gluten free and vegan",
+          "source": "llm-cache",
+          "outcome": "commands",
+          "reply": {
+            "commands": [
+              {
+                "cmd": "add_dietary_tag",
+                "itemId": "market-greens",
+                "tag": "gluten-free"
+              },
+              {
+                "cmd": "add_dietary_tag",
+                "itemId": "market-greens",
+                "tag": "vegan"
+              }
+            ]
+          },
+          "compiled": "rejected: No change: \"Market Greens\" is already tagged gluten-free; \"Market Greens\" is already tagged vegan",
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        },
+        {
+          "utterance": "add a banner about our holiday party",
+          "source": "llm-cache",
+          "outcome": "refuse",
+          "reply": {
+            "refuse": {
+              "reason": "banners are not supported"
+            }
+          },
+          "compiled": "n/a",
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0
+        }
+      ]
+    }
+  ]
+}

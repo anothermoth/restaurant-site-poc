@@ -6,8 +6,10 @@ import { priceText, restaurantJsonLd } from "../lib/jsonld.ts";
 const r = menu.restaurant;
 const site = Astro.site!.toString();
 const featuredIds = ["margherita", "hot-honey-pepperoni", "smash-burger"];
-const featured = menu.categories.flatMap((c) => c.items).filter((i) => featuredIds.includes(i.id));
+const featured = menu.categories.flatMap((c) => c.items).filter((i) => featuredIds.includes(i.id) && i.available);
 const DAY: Record<string, string> = { Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat", Su: "Sun" };
+const openDays = new Set(r.hours.flatMap((h) => h.days));
+const closedDays = Object.keys(DAY).filter((d) => !openDays.has(d as never));
 const description = `${r.name}: ${r.cuisine.join(" & ")} in ${r.address.city}, ${r.address.region}. See the menu and order online.`;
 ---
 <Base title={`${r.name} | ${r.cuisine.join(" & ")} in ${r.address.city}`} description={description} jsonLd={restaurantJsonLd(menu, site)} ogImage={r.heroPhoto?.src}>
@@ -17,7 +19,7 @@ const description = `${r.name}: ${r.cuisine.join(" & ")} in ${r.address.city}, $
     )}
     <div class="hero-text wrap">
       <h1>{r.name}</h1>
-      {r.tagline && <p class="lede">{r.tagline}</p>}
+      {r.tagline && <p class="lede" data-edit-id="restaurant.tagline">{r.tagline}</p>}
       <div class="cta-row">
         <a class="btn btn-primary" href="/menu">View menu &amp; order</a>
         {r.phone && <a class="btn btn-ghost" href={`tel:${r.phone}`}>Call</a>}
@@ -44,14 +46,14 @@ const description = `${r.name}: ${r.cuisine.join(" & ")} in ${r.address.city}, $
   <section class="wrap section two-col">
     <div>
       <h2>Hours</h2>
-      <dl class="hours">
+      <dl class="hours" data-edit-id="restaurant.hours">
         {r.hours.map((h) => (
           <>
             <dt>{h.days.map((d) => DAY[d]).join(", ")}</dt>
             <dd>{h.opens} – {h.closes}</dd>
           </>
         ))}
-        <dt>Mon</dt><dd>Closed</dd>
+        {closedDays.length > 0 && (<><dt>{closedDays.map((d) => DAY[d]).join(", ")}</dt><dd>Closed</dd></>)}
       </dl>
     </div>
     <div>

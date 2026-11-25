@@ -7,3 +7,8 @@ coverage/
 !.env.example
 *.log
 .lighthouse-tmp/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+data/published/
+test-results/

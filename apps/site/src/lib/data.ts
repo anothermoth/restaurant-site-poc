@@ -1,4 +1,5 @@
-import raw from "../../../../data/sample-restaurant.menu.json";
+import { readFileSync } from "node:fs";
+import sample from "../../../../data/sample-restaurant.menu.json";
 import { parseMenu, type Menu } from "@restaurant-site-poc/menu-schema";
 import { applySafeFixes, checkMenu, type Report } from "@restaurant-site-poc/menu-checker";
 
@@ -8,6 +9,8 @@ import { applySafeFixes, checkMenu, type Report } from "@restaurant-site-poc/men
  * Anything not safe to fix (prices, duplicates, allergen tags) is published as-is
  * and surfaced on /admin/report for the owner to decide.
  */
+// MENU_PATH lets the API's publish step rebuild the site from the published menu.
+const raw: unknown = process.env.MENU_PATH ? JSON.parse(readFileSync(process.env.MENU_PATH, "utf8")) : sample;
 export const sourceMenu: Menu = parseMenu(raw);
 export const reportBeforeFixes: Report = checkMenu(sourceMenu);
 const fixed = applySafeFixes(sourceMenu, reportBeforeFixes.findings);

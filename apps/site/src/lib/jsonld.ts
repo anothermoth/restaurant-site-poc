@@ -21,7 +21,7 @@ export function menuJsonLd(menu: Menu, site: string) {
     "@id": abs(site, "/menu#menu"),
     name: `${menu.restaurant.name} Menu`,
     inLanguage: "en",
-    hasMenuSection: menu.categories.map((c) => ({
+    hasMenuSection: menu.categories.filter((c) => !c.hidden).map((c) => ({
       "@type": "MenuSection",
       name: c.name,
       ...(c.description ? { description: c.description } : {}),

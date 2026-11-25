@@ -1,0 +1,18 @@
+{
+  "name": "@restaurant-site-poc/command-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fixed command vocabulary for owner edits: deterministic parser, LLM fallback, validated compile to reversible ops.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@restaurant-site-poc/menu-checker": "0.1.0",
+    "@restaurant-site-poc/menu-schema": "0.1.0",
+    "zod": "^4.6.7"
+  }
+}

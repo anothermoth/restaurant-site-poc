@@ -7,8 +7,24 @@ on:
 
 jobs:
   build:
-    name: Typecheck, lint, test, check menu, build
+    name: Typecheck, lint, test (with MongoDB), check menu, build
     runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:8
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      MONGO_URL: mongodb://localhost:27017
+      NEXT_TELEMETRY_DISABLED: "1"
+      ASTRO_TELEMETRY_DISABLED: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -28,15 +44,18 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test
+      - name: Test (unit, component, and API against MongoDB; LLM calls are mocked)
         run: npm test
 
       - name: Menu quality check (deterministic rules, no LLM in CI)
         # The sample menu has seeded problems on purpose, so report but don't fail here.
         run: npm run check-menu -- data/sample-restaurant.menu.json --fail-on none
 
-      - name: Build site
+      - name: Build site (Astro)
         run: npm run build
+
+      - name: Build admin (Next.js)
+        run: npm run build -w @restaurant-site-poc/admin
 
       - name: Upload built site
         uses: actions/upload-artifact@v7

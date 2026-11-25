@@ -5,6 +5,7 @@ import { cartMenu, menu } from "../lib/data.ts";
 import { priceText, restaurantJsonLd } from "../lib/jsonld.ts";
 
 const r = menu.restaurant;
+const sections = menu.categories.filter((c) => !c.hidden);
 const site = Astro.site!.toString();
 const TAG_LABEL: Record<string, string> = {
   vegetarian: "V", vegan: "VG", "gluten-free": "GF", "dairy-free": "DF", "nut-free": "NF", spicy: "Spicy",
@@ -15,29 +16,29 @@ const TAG_TITLE: Record<string, string> = {
 ---
 <Base
   title={`Menu | ${r.name}`}
-  description={`Full menu for ${r.name}: ${menu.categories.map((c) => c.name).join(", ")}. Order online for pickup.`}
+  description={`Full menu for ${r.name}: ${sections.map((c) => c.name).join(", ")}. Order online for pickup.`}
   jsonLd={restaurantJsonLd(menu, site, { includeMenu: true })}
 >
   <div class="wrap section">
     <h1>Menu</h1>
     <nav class="cat-nav" aria-label="Menu sections">
-      {menu.categories.map((c) => <a href={`#${c.id}`}>{c.name}</a>)}
+      {sections.map((c) => <a href={`#${c.id}`}>{c.name}</a>)}
     </nav>
 
-    {menu.categories.map((c) => (
-      <section class="menu-section" id={c.id} aria-labelledby={`${c.id}-h`}>
+    {sections.map((c) => (
+      <section class="menu-section" id={c.id} aria-labelledby={`${c.id}-h`} data-edit-id={`category:${c.id}`}>
         <h2 id={`${c.id}-h`}>{c.name}</h2>
         {c.description && <p class="muted">{c.description}</p>}
         <ul class="menu-list">
           {c.items.filter((i) => i.available).map((i) => {
             const allergens = i.dietaryTags.filter((t) => t.startsWith("contains-")).map((t) => t.replace("contains-", ""));
             return (
-              <li class="menu-item">
+              <li class="menu-item" data-edit-id={`item:${i.id}`}>
                 <div class="mi-text">
-                  <h3>{i.name}</h3>
-                  {i.description && <p class="muted">{i.description}</p>}
+                  <h3 data-edit-id={`item:${i.id}.name`}>{i.name}</h3>
+                  {i.description && <p class="muted" data-edit-id={`item:${i.id}.description`}>{i.description}</p>}
                   <p class="mi-meta">
-                    <span class="price">{priceText(i.price, menu.currency)}</span>
+                    <span class="price" data-edit-id={`item:${i.id}.price`}>{priceText(i.price, menu.currency)}</span>
                     {i.dietaryTags.filter((t) => TAG_LABEL[t]).map((t) => <abbr class="tag" title={TAG_TITLE[t]}>{TAG_LABEL[t]}</abbr>)}
                     {allergens.length > 0 && <span class="small muted">Contains: {allergens.join(", ")}</span>}
                   </p>

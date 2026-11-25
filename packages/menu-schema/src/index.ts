@@ -71,6 +71,8 @@ export const Category = z.object({
   id: Id,
   name: z.string().min(1),
   description: z.string().optional(),
+  /** Hidden sections stay in the data (so they can be shown again) but don't render. */
+  hidden: z.boolean().default(false),
   items: z.array(MenuItem),
 });
 export type Category = z.infer<typeof Category>;

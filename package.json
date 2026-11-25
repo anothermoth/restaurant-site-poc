@@ -2,7 +2,7 @@
   "name": "restaurant-site-poc",
   "private": true,
   "version": "0.1.0",
-  "description": "Fast static restaurant website generator (Astro + React island) with a deterministic + optional-LLM menu-quality checker.",
+  "description": "Fast static restaurant site (Astro + React island), menu-quality checker, and a voice-driven, owner-approved site editor (Next.js + Express + MongoDB).",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -19,7 +19,11 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check-menu": "tsx packages/menu-checker/src/cli.ts",
-    "lighthouse": "./scripts/lighthouse.sh"
+    "lighthouse": "./scripts/lighthouse.sh",
+    "dev:api": "npm run dev -w @restaurant-site-poc/api",
+    "dev:admin": "npm run dev -w @restaurant-site-poc/admin",
+    "measure:tokens": "tsx scripts/measure-commands.ts",
+    "demo:record": "node scripts/record-demo.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -27,6 +31,7 @@
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
+    "playwright-core": "^1.65.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.74.0",
