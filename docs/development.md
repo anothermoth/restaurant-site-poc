@@ -43,3 +43,5 @@ Without an API key the editor runs on the parser alone and tells you when it did
 6. In ⋯ → Recent changes, undo the burrata change. Then press **Publish**, open the published site (or, in demo mode, your published preview) and see $16.50 on the menu.
 
 CI (GitHub Actions) runs install → typecheck → lint → test (with a MongoDB service container for the API tests) → `check-menu` (deterministic only) → build the site → build the admin, and uploads the built site as an artifact. CI never calls an LLM (model calls are mocked in tests). CI doesn't deploy: the Cloudflare Pages deploy is a manual `npm run deploy:pages`.
+
+**Usage stats (internal).** The editor sends cookieless page views to Vercel Web Analytics (internal pages excluded), the public site uses Cloudflare Web Analytics (turned on in the Pages project, no code), and `/admin/sessions` (needs `ADMIN_TOKEN`) lists demo sandboxes from a non-expiring `visits` summary (counts and times only; no IPs or cookies) plus the day-long event log.

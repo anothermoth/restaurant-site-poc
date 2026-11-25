@@ -115,6 +115,11 @@ export function createRouter(service: EditService, opts: { seedMenu?: Menu; conf
     const days = Math.min(90, Math.max(1, Number(req.query.get("days") ?? 7) || 7));
     return service.margin({ days });
   });
+  on("GET", "/api/admin/sessions", async ({ req }) => {
+    requireAdmin(req);
+    const days = Math.min(90, Math.max(1, Number(req.query.get("days") ?? 7) || 7));
+    return service.sessions({ days });
+  });
   on("PUT", "/api/admin/sites/:slug/credits", async ({ req, params }) => {
     requireAdmin(req);
     const { credits } = CreditsBody.parse(req.body);

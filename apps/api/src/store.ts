@@ -80,6 +80,21 @@ export interface CounterDoc {
   expiresAt: Date;
 }
 
+/**
+ * One non-expiring summary row per demo sandbox, so "who tried the demo" survives the
+ * sandbox's TTL. Counts and times only: no utterances, cookies or IP data.
+ */
+export interface VisitDoc {
+  _id: string; // sandbox slug (already a hash of the session cookie)
+  account: string;
+  createdAt: Date;
+  lastSeenAt: Date;
+  /** Event counts by type (proposed, approved, undone, clarify, refused, ...). */
+  counts: Partial<Record<EventDoc["type"], number>>;
+  aiCalls: number;
+  aiCostUsd: number;
+}
+
 export interface LlmCacheDoc {
   _id: string;
   reply: LlmReply;
@@ -93,6 +108,7 @@ export interface Collections {
   llmCalls: Collection<LlmCallDoc>;
   llmCache: Collection<LlmCacheDoc>;
   counters: Collection<CounterDoc>;
+  visits: Collection<VisitDoc>;
 }
 
 export async function collections(db: Db): Promise<Collections> {
@@ -103,6 +119,7 @@ export async function collections(db: Db): Promise<Collections> {
     llmCalls: db.collection<LlmCallDoc>("llm_calls"),
     llmCache: db.collection<LlmCacheDoc>("llm_cache"),
     counters: db.collection<CounterDoc>("counters"),
+    visits: db.collection<VisitDoc>("visits"),
   };
   await Promise.all([
     c.changes.createIndex({ slug: 1, createdAt: -1 }),
@@ -111,6 +128,7 @@ export async function collections(db: Db): Promise<Collections> {
     c.llmCalls.createIndex({ slug: 1, at: -1 }),
     c.llmCache.createIndex({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 }),
     c.llmCalls.createIndex({ at: -1 }),
+    c.visits.createIndex({ lastSeenAt: -1 }),
     // Documents with an `expiresAt` date are deleted by MongoDB's TTL monitor (runs about once a minute).
     c.sites.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     c.changes.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),

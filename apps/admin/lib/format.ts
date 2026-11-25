@@ -60,3 +60,20 @@ export function plainRows(change: { ops: Op[]; summary: string[] }, menu: { curr
       return { key: op.path, what, before: value(op.before), after: value(op.after) };
     });
 }
+
+/** Internal pages (margin, sessions) are left out of page-view analytics. */
+export function isInternalPath(pathname: string): boolean {
+  return /^\/(dev|admin)(\/|$)/.test(pathname);
+}
+
+/** A timestamp in the owner's time zone, e.g. "Nov 25, 2:31 PM CST". */
+export function formatChicago(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(iso));
+}

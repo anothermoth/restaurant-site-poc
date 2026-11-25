@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "@fontsource-variable/inter/wght.css";
 import "@fontsource/instrument-serif/latin-400.css";
 import "./globals.css";
+import { SiteAnalytics } from "../components/SiteAnalytics.tsx";
 
 export const metadata: Metadata = {
   title: "Site editor · Ember & Elm Kitchen (demo)",
@@ -18,7 +19,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <SiteAnalytics />
+      </body>
     </html>
   );
 }

@@ -243,4 +243,57 @@ describe("demo mode", () => {
     await request(app).get(`/api/sites/someone-else`).expect(404);
     expect((await request(app).get(`/api/health`)).body).toEqual({ ok: true, demo: true });
   });
+
+  describe("sessions page data", () => {
+    const env = { ...demoEnv, ADMIN_TOKEN: "secret-test-token" };
+
+    it("needs the admin token", async () => {
+      const { app } = await setup(env);
+      await request(app).get(`/api/admin/sessions`).expect(401);
+      await request(app).get(`/api/admin/sessions`).set("x-admin-token", "wrong").expect(401);
+      await request(app).get(`/api/admin/sessions`).set("x-admin-token", "secret-test-token").expect(200);
+    });
+
+    it("lists each sandbox with its requests, decisions and AI cost, and never stores IPs or cookies", async () => {
+      const { app } = await setup(env);
+      const a = request.agent(app);
+      const b = request.agent(app);
+      const p = await a.post(`/api/sites/${slug}/commands`).send({ utterance: "hide the wings" }).set("x-forwarded-for", "203.0.113.9");
+      await a.post(`/api/sites/${slug}/changes/${p.body.change.id}/approve`).expect(200);
+      await a.post(`/api/sites/${slug}/undo`).send({}).expect(200);
+      await b.get(`/api/sites/${slug}`); // a visitor who only looked
+      clock = new Date(clock.getTime() + 5 * 60_000);
+      await a.post(`/api/sites/${slug}/commands`).send({ utterance: offGrammar() }); // one real (mocked) model call
+
+      const body = (await request(app).get(`/api/admin/sessions?days=1`).set("x-admin-token", "secret-test-token").expect(200)).body;
+      expect(body.totals).toMatchObject({ sessions: 2, active: 2, withRequests: 1, requests: 2, approved: 1, undone: 1, aiCalls: 1 });
+      const [first, second] = body.sessions;
+      expect(first).toMatchObject({ requests: 2, proposed: 2, approved: 1, undone: 1, aiCalls: 1, active: true });
+      expect(first.aiCostUsd).toBeGreaterThan(0);
+      expect(first.utterances.map((u: { text: string }) => u.text)[0]).toBe("hide the wings");
+      expect(first.createdAt).toBe("2026-11-24T18:00:00.000Z");
+      expect(first.lastSeenAt).toBe("2026-11-24T18:05:00.000Z");
+      expect(second).toMatchObject({ requests: 0, aiCalls: 0 });
+
+      // The non-expiring summary holds only counts and times.
+      const visits = await db.collection("visits").find().toArray();
+      expect(visits).toHaveLength(2);
+      const raw = JSON.stringify(visits);
+      expect(raw).not.toMatch(/203\.0\.113\.9|hide the wings|rsp_sid/);
+      expect(Object.keys(visits.find((v) => v.aiCalls)!).sort()).toEqual(["_id", "account", "aiCalls", "aiCostUsd", "counts", "createdAt", "lastSeenAt"]);
+    });
+
+    it("keeps the history after the sandbox and its events expire", async () => {
+      const { app } = await setup(env);
+      const a = request.agent(app);
+      const p = await a.post(`/api/sites/${slug}/commands`).send({ utterance: "hide the wings" });
+      await a.post(`/api/sites/${slug}/changes/${p.body.change.id}/approve`).expect(200);
+      // What the TTL monitor does a day later.
+      await Promise.all(["sites", "events", "changes"].map((c) => db.collection(c).deleteMany({ slug: { $regex: "~" } })));
+      await db.collection("sites").deleteMany({ sandboxOf: slug });
+      const body = (await request(app).get(`/api/admin/sessions`).set("x-admin-token", "secret-test-token").expect(200)).body;
+      expect(body.sessions).toHaveLength(1);
+      expect(body.sessions[0]).toMatchObject({ active: false, requests: 1, approved: 1, utterances: [] });
+    });
+  });
 });

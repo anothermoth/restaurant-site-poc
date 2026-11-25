@@ -150,6 +150,7 @@ export class EditService {
    */
   async touchSandbox(slug: string, seedMenu: Menu, idleMs: number) {
     const expiresAt = new Date(this.now().getTime() + idleMs);
+    await this.visit(slug);
     const version = seedVersion(seedMenu);
     const r = await this.c.sites.updateOne({ _id: slug, seedVersion: version }, { $set: { expiresAt } });
     if (r.matchedCount > 0) return;
@@ -263,6 +264,129 @@ export class EditService {
 
   private async log(slug: string, type: Parameters<Collections["events"]["insertOne"]>[0]["type"], extra: { changeId?: ObjectId; utterance?: string; detail?: string } = {}) {
     await this.c.events.insertOne({ slug, type, ...extra, at: this.now(), ...this.ttl(slug) });
+    await this.visit(slug, { [`counts.${type}`]: 1 });
+  }
+
+  /** Keeps the sandbox's non-expiring visit summary current (demo sandboxes only). */
+  private async visit(slug: string, inc: Record<string, number> = {}) {
+    if (!isSandbox(slug)) return;
+    const now = this.now();
+    await this.c.visits.updateOne(
+      { _id: slug },
+      {
+        $max: { lastSeenAt: now },
+        $setOnInsert: { account: accountOf(slug), createdAt: now },
+        ...(Object.keys(inc).length ? { $inc: inc } : {}),
+      },
+      { upsert: true },
+    );
+  }
+
+  /**
+   * Internal: recent demo sandboxes, newest activity first. Merges the non-expiring
+   * visit summaries with whatever events and model calls are still stored. Times are
+   * returned as ISO strings; the admin page shows them in America/Chicago.
+   */
+  async sessions({ days = 7, limit = 100 }: { days?: number; limit?: number } = {}) {
+    const now = this.now();
+    const since = new Date(now.getTime() - days * DAY_MS);
+    const sbx = new RegExp(SANDBOX_SEP);
+    const [visits, events, calls] = await Promise.all([
+      this.c.visits.find({ lastSeenAt: { $gte: since } }).sort({ lastSeenAt: -1 }).limit(limit).toArray(),
+      this.c.events.find({ slug: sbx, at: { $gte: since } }, { projection: { slug: 1, type: 1, utterance: 1, at: 1 } }).sort({ at: 1 }).toArray(),
+      this.c.llmCalls
+        .aggregate<{ _id: string; calls: number; cost: number; first: Date; last: Date }>([
+          { $match: { slug: sbx, at: { $gte: since } } },
+          { $group: { _id: "$slug", calls: { $sum: 1 }, cost: { $sum: "$usage.costUsd" }, first: { $min: "$at" }, last: { $max: "$at" } } },
+        ])
+        .toArray(),
+    ]);
+    type Row = {
+      slug: string;
+      createdAt: Date;
+      lastSeenAt: Date;
+      counts: Record<string, number>;
+      aiCalls: number;
+      aiCostUsd: number;
+      utterances: Array<{ at: Date; type: string; text: string }>;
+    };
+    const rows = new Map<string, Row>();
+    const row = (slug: string, at: Date): Row => {
+      let r = rows.get(slug);
+      if (!r) rows.set(slug, (r = { slug, createdAt: at, lastSeenAt: at, counts: {}, aiCalls: 0, aiCostUsd: 0, utterances: [] }));
+      return r;
+    };
+    for (const v of visits) {
+      const r = row(v._id, v.createdAt);
+      r.lastSeenAt = v.lastSeenAt;
+      r.counts = { ...v.counts } as Record<string, number>;
+      r.aiCalls = v.aiCalls ?? 0;
+      r.aiCostUsd = v.aiCostUsd ?? 0;
+    }
+    // Events still on file (they expire a day after they're written) fill in the utterances, and the counts for sandboxes older than visit tracking.
+    const fromEvents = new Map<string, Record<string, number>>();
+    for (const e of events) {
+      const r = row(e.slug, e.at);
+      if (e.at < r.createdAt) r.createdAt = e.at;
+      if (e.at > r.lastSeenAt) r.lastSeenAt = e.at;
+      const c = fromEvents.get(e.slug) ?? {};
+      c[e.type] = (c[e.type] ?? 0) + 1;
+      fromEvents.set(e.slug, c);
+      if (e.utterance) r.utterances.push({ at: e.at, type: e.type, text: e.utterance.slice(0, 200) });
+    }
+    for (const [slug, c] of fromEvents) {
+      const r = rows.get(slug)!;
+      for (const [k, n] of Object.entries(c)) r.counts[k] = Math.max(r.counts[k] ?? 0, n);
+    }
+    for (const c of calls) {
+      const r = row(c._id, c.first);
+      if (c.last > r.lastSeenAt) r.lastSeenAt = c.last;
+      r.aiCalls = Math.max(r.aiCalls, c.calls);
+      r.aiCostUsd = Math.max(r.aiCostUsd, c.cost);
+    }
+    const live = new Set(
+      (await this.c.sites.find({ _id: { $in: [...rows.keys()] }, expiresAt: { $gt: now } }, { projection: { _id: 1 } }).toArray()).map((s) => s._id),
+    );
+    const n = (r: Row, ...types: string[]) => types.reduce((a, t) => a + (r.counts[t] ?? 0), 0);
+    const list = [...rows.values()]
+      .filter((r) => r.lastSeenAt >= since)
+      .sort((a, b) => b.lastSeenAt.getTime() - a.lastSeenAt.getTime())
+      .slice(0, limit)
+      .map((r) => ({
+        id: r.slug.split(SANDBOX_SEP)[1]!.slice(0, 8),
+        account: accountOf(r.slug),
+        createdAt: r.createdAt.toISOString(),
+        lastSeenAt: r.lastSeenAt.toISOString(),
+        active: live.has(r.slug),
+        requests: n(r, "proposed", "clarify", "refused", "error"),
+        proposed: n(r, "proposed"),
+        approved: n(r, "approved"),
+        rejected: n(r, "rejected"),
+        undone: n(r, "undone"),
+        published: n(r, "published"),
+        clarify: n(r, "clarify"),
+        refused: n(r, "refused", "error"),
+        aiCalls: r.aiCalls,
+        aiCostUsd: round(r.aiCostUsd),
+        utterances: r.utterances.slice(-20).map((u) => ({ at: u.at.toISOString(), type: u.type, text: u.text })),
+      }));
+    const sum = (k: "requests" | "approved" | "undone" | "published" | "aiCalls") => list.reduce((a, r) => a + r[k], 0);
+    return {
+      days,
+      generatedAt: now.toISOString(),
+      totals: {
+        sessions: list.length,
+        active: list.filter((r) => r.active).length,
+        withRequests: list.filter((r) => r.requests > 0).length,
+        requests: sum("requests"),
+        approved: sum("approved"),
+        undone: sum("undone"),
+        published: sum("published"),
+        aiCalls: sum("aiCalls"),
+        aiCostUsd: round(list.reduce((a, r) => a + r.aiCostUsd, 0)),
+      },
+      sessions: list,
+    };
   }
 
   private dayKey() {
@@ -429,6 +553,7 @@ export class EditService {
       const outcome = "commands" in fb.reply ? "commands" : "clarify" in fb.reply ? "clarify" : "refuse";
       if (fb.usage) {
         await this.c.llmCalls.insertOne({ slug, account: accountOf(slug), utterance, outcome, usage: fb.usage, credits, at: this.now() });
+        await this.visit(slug, { aiCalls: 1, aiCostUsd: fb.usage.costUsd });
         await this.recordSpend(fb.usage.costUsd);
       }
       if ("clarify" in fb.reply) {
